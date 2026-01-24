@@ -13,6 +13,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let voiceInputManager = VoiceInputManager()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        NSApplication.shared.setActivationPolicy(.accessory)
         setupMenuBar()
         setupGestureHandling()
         checkPermissions()
