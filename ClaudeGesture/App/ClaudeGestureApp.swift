@@ -16,8 +16,4 @@ struct ClaudeGestureApp: App {
         .windowResizability(.contentSize)
     }
 
-    init() {
-        // Hide the dock icon for menubar-only app
-        NSApp.setActivationPolicy(.accessory)
-    }
 }
