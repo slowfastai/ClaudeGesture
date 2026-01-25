@@ -1,4 +1,5 @@
 import Cocoa
+import Combine
 import SwiftUI
 
 /// App delegate for handling permissions and menubar setup
@@ -16,12 +17,19 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Track the previously active app for focus restoration
     private var previousActiveApp: NSRunningApplication?
 
+    // Track when we were last activated (to determine if URL event caused activation)
+    private var lastActivationTime: Date?
+
+    // Combine cancellables for observing camera state
+    private var cancellables = Set<AnyCancellable>()
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         setupMenuBar()
         setupGestureHandling()
         setupURLHandler()
         setupFocusTracking()
+        setupCameraStateObserver()
         checkPermissions()
     }
 
@@ -37,6 +45,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Capture the frontmost app BEFORE we become active (critical for focus restoration)
     @objc private func appWillBecomeActive(_ notification: Notification) {
+        // Record activation time to detect if URL event caused this activation
+        lastActivationTime = Date()
+
         // At this moment, we're about to become active but haven't yet
         // So frontmostApplication is still the PREVIOUS app
         let frontmost = NSWorkspace.shared.frontmostApplication
@@ -46,6 +57,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             previousActiveApp = frontmost
             print("📍 Captured previous app: \(frontmost?.localizedName ?? "unknown")")
         }
+    }
+
+    /// Observe camera state changes to keep menubar icon in sync
+    private func setupCameraStateObserver() {
+        cameraManager.$isRunning
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] isRunning in
+                guard let self = self,
+                      self.settings.cameraControlMode == .hookControlled else { return }
+                self.updateStatusIconForHookState(active: isRunning)
+            }
+            .store(in: &cancellables)
     }
 
     /// Register handler for custom URL scheme (claudegesture://)
@@ -86,8 +109,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             print("Unknown camera command: \(command)")
         }
 
-        // Restore focus to previous app to prevent focus stealing
-        restoreFocusToPreviousApp()
+        // Only restore focus if we were JUST activated (within last 500ms)
+        // This indicates the URL event caused the activation, not a prior user action
+        let wasJustActivated = lastActivationTime.map { Date().timeIntervalSince($0) < 0.5 } ?? false
+        if wasJustActivated {
+            restoreFocusToPreviousApp()
+        }
+        lastActivationTime = nil
     }
 
     /// Handle camera start command from URL scheme
