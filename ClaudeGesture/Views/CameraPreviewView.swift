@@ -9,6 +9,7 @@ struct CameraPreviewView: NSViewRepresentable {
         let view = CameraPreviewNSView()
         view.wantsLayer = true
         if let layer = previewLayer {
+            configurePreviewLayer(layer)
             layer.frame = view.bounds
             layer.videoGravity = .resizeAspectFill
             view.layer?.addSublayer(layer)
@@ -18,8 +19,17 @@ struct CameraPreviewView: NSViewRepresentable {
 
     func updateNSView(_ nsView: CameraPreviewNSView, context: Context) {
         if let layer = previewLayer {
+            configurePreviewLayer(layer)
             layer.frame = nsView.bounds
         }
+    }
+
+    private func configurePreviewLayer(_ layer: AVCaptureVideoPreviewLayer) {
+        if let connection = layer.connection, connection.isVideoMirroringSupported {
+            connection.automaticallyAdjustsVideoMirroring = false
+            connection.isVideoMirrored = false
+        }
+        layer.transform = CATransform3DMakeScale(-1, 1, 1)
     }
 }
 

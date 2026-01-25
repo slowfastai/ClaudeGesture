@@ -139,6 +139,13 @@ struct MenuBarView: View {
                 }
             }
 
+            if settings.showCameraPreview {
+                CameraPreviewWithOverlay(
+                    cameraManager: cameraManager,
+                    gestureDetector: gestureDetector
+                )
+            }
+
             // Permissions Warnings
             if !cameraManager.permissionGranted {
                 WarningRow(

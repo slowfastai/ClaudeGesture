@@ -91,7 +91,8 @@ class CameraManager: NSObject, ObservableObject {
             // Set video orientation
             if let connection = self.videoOutput.connection(with: .video) {
                 connection.videoRotationAngle = 0
-                connection.isVideoMirrored = true
+                connection.automaticallyAdjustsVideoMirroring = false
+                connection.isVideoMirrored = false
             }
 
             self.captureSession.commitConfiguration()
@@ -100,6 +101,10 @@ class CameraManager: NSObject, ObservableObject {
             DispatchQueue.main.async {
                 self.previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
                 self.previewLayer?.videoGravity = .resizeAspectFill
+                if let connection = self.previewLayer?.connection {
+                    connection.automaticallyAdjustsVideoMirroring = false
+                    connection.isVideoMirrored = false
+                }
             }
         }
     }
