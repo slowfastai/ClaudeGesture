@@ -46,6 +46,7 @@ struct MenuBarView: View {
                     }
                 }
                 .pickerStyle(.segmented)
+                .labelsHidden()
 
                 Text(settings.cameraControlMode.description)
                     .font(.caption2)
