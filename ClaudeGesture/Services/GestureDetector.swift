@@ -10,6 +10,24 @@ class GestureDetector: ObservableObject {
 
     private let settings = AppSettings.shared
 
+    private let visionQueue = DispatchQueue(label: "com.claudegesture.vision")
+    private let processingSemaphore = DispatchSemaphore(value: 1)
+    private let sequenceHandler = VNSequenceRequestHandler()
+    private let handPoseRequest = VNDetectHumanHandPoseRequest()
+
+    private var frameIndex = 0
+    private var stableGesture: Gesture = .none
+    private var stableGestureFrames = 0
+    private let stableFrameThreshold = 5
+    private let frameSkipWhenStable = 2
+    private let staleTimeout: TimeInterval = 0.4
+    private var lastValidDetectionTime: Date?
+    private var trackingObservation: VNDetectedObjectObservation?
+    private var lastFullDetectionFrame = 0
+    private let fullDetectionInterval = 10
+    private let trackingConfidenceThreshold: Float = 0.5
+    private let roiPaddingRatio: CGFloat = 0.15
+
     // Debouncing
     private var lastGesture: Gesture = .none
     private var gestureStartTime: Date?
@@ -18,45 +36,99 @@ class GestureDetector: ObservableObject {
     /// Callback when a gesture is confirmed (held for required duration)
     var onGestureConfirmed: ((Gesture) -> Void)?
 
+    init() {
+        handPoseRequest.maximumHandCount = 1
+    }
+
     /// Analyze a frame for hand gestures
     func analyzeFrame(_ pixelBuffer: CVPixelBuffer) {
-        guard !isProcessing else { return }
-        isProcessing = true
+        guard processingSemaphore.wait(timeout: .now()) == .success else { return }
 
-        let request = VNDetectHumanHandPoseRequest { [weak self] request, error in
-            defer {
-                DispatchQueue.main.async {
-                    self?.isProcessing = false
+        DispatchQueue.main.async {
+            self.isProcessing = true
+        }
+
+        visionQueue.async { [weak self] in
+            self?.processFrame(pixelBuffer)
+        }
+    }
+
+    private func processFrame(_ pixelBuffer: CVPixelBuffer) {
+        defer { finishProcessing() }
+
+        frameIndex += 1
+        let now = Date()
+
+        if handleStaleIfNeeded(now: now) {
+            return
+        }
+
+        let shouldRefreshFullDetection = frameIndex - lastFullDetectionFrame >= fullDetectionInterval
+        if shouldSkipFrame(forceFullDetection: shouldRefreshFullDetection) {
+            return
+        }
+
+        var useFullDetection = shouldRefreshFullDetection || trackingObservation == nil
+        var roi: CGRect?
+
+        if !useFullDetection, let trackingObservation = trackingObservation {
+            if let updatedObservation = performTracking(on: pixelBuffer, observation: trackingObservation) {
+                if updatedObservation.confidence >= trackingConfidenceThreshold {
+                    self.trackingObservation = updatedObservation
+                    roi = expandedRegion(for: updatedObservation.boundingBox)
+                } else {
+                    self.trackingObservation = nil
+                    useFullDetection = true
                 }
+            } else {
+                self.trackingObservation = nil
+                useFullDetection = true
             }
+        }
 
-            guard error == nil,
-                  let observations = request.results as? [VNHumanHandPoseObservation],
+        if useFullDetection {
+            handPoseRequest.regionOfInterest = CGRect(x: 0, y: 0, width: 1, height: 1)
+        } else if let roi = roi {
+            handPoseRequest.regionOfInterest = roi
+        }
+
+        do {
+            try sequenceHandler.perform([handPoseRequest], on: pixelBuffer)
+
+            guard let observations = handPoseRequest.results as? [VNHumanHandPoseObservation],
                   let observation = observations.first else {
-                DispatchQueue.main.async {
-                    self?.resetGesture()
-                }
+                handleNoObservation()
                 return
             }
 
-            self?.classifyGesture(from: observation)
-        }
+            let result = classifyGesture(from: observation)
+            guard result.isValid else {
+                handleNoObservation()
+                return
+            }
 
-        request.maximumHandCount = 1
+            lastValidDetectionTime = now
+            if let boundingBox = handBoundingBox(from: observation) {
+                trackingObservation = VNDetectedObjectObservation(boundingBox: boundingBox)
+            } else {
+                trackingObservation = nil
+            }
+            if useFullDetection {
+                lastFullDetectionFrame = frameIndex
+            }
 
-        let handler = VNImageRequestHandler(cvPixelBuffer: pixelBuffer, options: [:])
-        do {
-            try handler.perform([request])
+            updateStability(for: result.gesture, confidence: result.confidence)
+            DispatchQueue.main.async {
+                self.updateGesture(result.gesture, confidence: result.confidence)
+            }
         } catch {
             print("Vision request failed: \(error)")
-            DispatchQueue.main.async {
-                self.isProcessing = false
-            }
+            handleNoObservation()
         }
     }
 
     /// Classify the gesture based on hand pose observation
-    private func classifyGesture(from observation: VNHumanHandPoseObservation) {
+    private func classifyGesture(from observation: VNHumanHandPoseObservation) -> (gesture: Gesture, confidence: Float, isValid: Bool) {
         do {
             // Get finger tip and pip (proximal interphalangeal) points
             let thumbTip = try observation.recognizedPoint(.thumbTip)
@@ -69,17 +141,13 @@ class GestureDetector: ObservableObject {
             let ringPIP = try observation.recognizedPoint(.ringPIP)
             let littleTip = try observation.recognizedPoint(.littleTip)
             let littlePIP = try observation.recognizedPoint(.littlePIP)
-            let wrist = try observation.recognizedPoint(.wrist)
 
             // Check confidence threshold
             let minConfidence = Float(settings.gestureSensitivity)
             guard thumbTip.confidence > minConfidence,
                   indexTip.confidence > minConfidence,
                   middleTip.confidence > minConfidence else {
-                DispatchQueue.main.async {
-                    self.resetGesture()
-                }
-                return
+                return (.none, 0, false)
             }
 
             // Determine which fingers are extended
@@ -89,9 +157,6 @@ class GestureDetector: ObservableObject {
             let middleExtended = middleTip.y > middlePIP.y + 0.03
             let ringExtended = ringTip.y > ringPIP.y + 0.03
             let littleExtended = littleTip.y > littlePIP.y + 0.03
-
-            // Count extended fingers
-            let extendedCount = [indexExtended, middleExtended, ringExtended, littleExtended].filter { $0 }.count
 
             // Classify gesture
             let detectedGesture: Gesture
@@ -138,15 +203,11 @@ class GestureDetector: ObservableObject {
                 confidence = 0
             }
 
-            DispatchQueue.main.async {
-                self.updateGesture(detectedGesture, confidence: confidence)
-            }
+            return (detectedGesture, confidence, true)
 
         } catch {
             print("Failed to get hand points: \(error)")
-            DispatchQueue.main.async {
-                self.resetGesture()
-            }
+            return (.none, 0, false)
         }
     }
 
@@ -191,5 +252,109 @@ class GestureDetector: ObservableObject {
         detectionConfidence = 0
         lastGesture = .none
         gestureStartTime = nil
+    }
+
+    private func updateStability(for gesture: Gesture, confidence: Float) {
+        let minConfidence = Float(settings.gestureSensitivity)
+        guard gesture != .none, confidence >= minConfidence else {
+            stableGesture = .none
+            stableGestureFrames = 0
+            return
+        }
+
+        if gesture == stableGesture {
+            stableGestureFrames += 1
+        } else {
+            stableGesture = gesture
+            stableGestureFrames = 1
+        }
+    }
+
+    private func shouldSkipFrame(forceFullDetection: Bool) -> Bool {
+        guard !forceFullDetection else { return false }
+        guard trackingObservation != nil else { return false }
+        guard stableGestureFrames >= stableFrameThreshold else { return false }
+        let skipInterval = frameSkipWhenStable + 1
+        return frameIndex % skipInterval != 0
+    }
+
+    private func handleStaleIfNeeded(now: Date) -> Bool {
+        guard let lastValidDetectionTime = lastValidDetectionTime else { return false }
+        if now.timeIntervalSince(lastValidDetectionTime) > staleTimeout {
+            handleNoObservation()
+            return true
+        }
+        return false
+    }
+
+    private func handleNoObservation() {
+        lastValidDetectionTime = nil
+        trackingObservation = nil
+        stableGesture = .none
+        stableGestureFrames = 0
+        lastFullDetectionFrame = 0
+        DispatchQueue.main.async {
+            self.resetGesture()
+        }
+    }
+
+    private func performTracking(on pixelBuffer: CVPixelBuffer, observation: VNDetectedObjectObservation) -> VNDetectedObjectObservation? {
+        let request = VNTrackObjectRequest(detectedObjectObservation: observation)
+        request.trackingLevel = .fast
+        do {
+            try sequenceHandler.perform([request], on: pixelBuffer)
+            return request.results?.first as? VNDetectedObjectObservation
+        } catch {
+            return nil
+        }
+    }
+
+    private func handBoundingBox(from observation: VNHumanHandPoseObservation) -> CGRect? {
+        do {
+            let points = try observation.recognizedPoints(.all)
+            let minConfidence = Float(settings.gestureSensitivity)
+            let confidentPoints = points.values.filter { $0.confidence >= minConfidence }
+            guard !confidentPoints.isEmpty else { return nil }
+
+            var minX: CGFloat = 1
+            var minY: CGFloat = 1
+            var maxX: CGFloat = 0
+            var maxY: CGFloat = 0
+
+            for point in confidentPoints {
+                minX = min(minX, CGFloat(point.location.x))
+                minY = min(minY, CGFloat(point.location.y))
+                maxX = max(maxX, CGFloat(point.location.x))
+                maxY = max(maxY, CGFloat(point.location.y))
+            }
+
+            let width = max(0, maxX - minX)
+            let height = max(0, maxY - minY)
+            guard width > 0, height > 0 else { return nil }
+            return CGRect(x: minX, y: minY, width: width, height: height)
+        } catch {
+            return nil
+        }
+    }
+
+    private func expandedRegion(for boundingBox: CGRect) -> CGRect {
+        let paddingX = boundingBox.width * roiPaddingRatio
+        let paddingY = boundingBox.height * roiPaddingRatio
+        var expanded = boundingBox.insetBy(dx: -paddingX, dy: -paddingY)
+        expanded.origin.x = max(0, expanded.origin.x)
+        expanded.origin.y = max(0, expanded.origin.y)
+        expanded.size.width = min(1 - expanded.origin.x, expanded.size.width)
+        expanded.size.height = min(1 - expanded.origin.y, expanded.size.height)
+        if expanded.width <= 0 || expanded.height <= 0 {
+            return CGRect(x: 0, y: 0, width: 1, height: 1)
+        }
+        return expanded
+    }
+
+    private func finishProcessing() {
+        DispatchQueue.main.async {
+            self.isProcessing = false
+        }
+        processingSemaphore.signal()
     }
 }
