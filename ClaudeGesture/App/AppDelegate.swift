@@ -11,12 +11,158 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let gestureDetector = GestureDetector()
     let keyboardSimulator = KeyboardSimulator()
     let voiceInputManager = VoiceInputManager()
+    let settings = AppSettings.shared
+
+    // Track the previously active app for focus restoration
+    private var previousActiveApp: NSRunningApplication?
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         setupMenuBar()
         setupGestureHandling()
+        setupURLHandler()
+        setupFocusTracking()
         checkPermissions()
+    }
+
+    /// Track when another app is about to lose focus to us
+    private func setupFocusTracking() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillBecomeActive),
+            name: NSApplication.willBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    /// Capture the frontmost app BEFORE we become active (critical for focus restoration)
+    @objc private func appWillBecomeActive(_ notification: Notification) {
+        // At this moment, we're about to become active but haven't yet
+        // So frontmostApplication is still the PREVIOUS app
+        let frontmost = NSWorkspace.shared.frontmostApplication
+
+        // Only capture if it's not ourselves (avoid self-reference)
+        if frontmost?.bundleIdentifier != Bundle.main.bundleIdentifier {
+            previousActiveApp = frontmost
+            print("📍 Captured previous app: \(frontmost?.localizedName ?? "unknown")")
+        }
+    }
+
+    /// Register handler for custom URL scheme (claudegesture://)
+    private func setupURLHandler() {
+        NSAppleEventManager.shared().setEventHandler(
+            self,
+            andSelector: #selector(handleURLEvent(_:withReplyEvent:)),
+            forEventClass: AEEventClass(kInternetEventClass),
+            andEventID: AEEventID(kAEGetURL)
+        )
+    }
+
+    /// Handle incoming URL events (claudegesture://camera/start or claudegesture://camera/stop)
+    @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
+        // Note: previousActiveApp is already captured by appWillBecomeActive notification
+        // which fires BEFORE we become active (correct timing for focus restoration)
+
+        guard let urlString = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
+              let url = URL(string: urlString) else {
+            return
+        }
+
+        // Parse URL: claudegesture://camera/start -> host="camera", path="/start"
+        guard url.scheme == "claudegesture",
+              url.host == "camera" else {
+            print("Unknown URL: \(urlString)")
+            return
+        }
+
+        let command = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+
+        switch command {
+        case "start":
+            handleCameraStartCommand()
+        case "stop":
+            handleCameraStopCommand()
+        default:
+            print("Unknown camera command: \(command)")
+        }
+
+        // Restore focus to previous app to prevent focus stealing
+        restoreFocusToPreviousApp()
+    }
+
+    /// Handle camera start command from URL scheme
+    private func handleCameraStartCommand() {
+        // Only start camera if: master toggle is ON and mode is hook-controlled
+        guard settings.isEnabled,
+              settings.cameraControlMode == .hookControlled else {
+            print("Camera start ignored: isEnabled=\(settings.isEnabled), mode=\(settings.cameraControlMode)")
+            return
+        }
+
+        if !cameraManager.isRunning {
+            cameraManager.start()
+            updateStatusIconForHookState(active: true)
+            print("Camera started via hook")
+        }
+    }
+
+    /// Handle camera stop command from URL scheme
+    private func handleCameraStopCommand() {
+        // Only respond to stop if mode is hook-controlled
+        guard settings.cameraControlMode == .hookControlled else {
+            print("Camera stop ignored: mode=\(settings.cameraControlMode)")
+            return
+        }
+
+        // Always reset icon to standby (handles failed starts or rapid stop after start)
+        updateStatusIconForHookState(active: false)
+
+        if cameraManager.isRunning {
+            cameraManager.stop()
+            print("Camera stopped via hook")
+        }
+    }
+
+    /// Restore focus to the previous app to prevent focus stealing from URL scheme activation
+    private func restoreFocusToPreviousApp() {
+        // Use a small delay to ensure URL event is fully processed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self = self else { return }
+
+            // Deactivate ourselves first
+            NSApp.deactivate()
+
+            // Restore focus to the previously tracked app
+            if let previous = self.previousActiveApp, !previous.isTerminated {
+                let success = previous.activate(options: [.activateIgnoringOtherApps])
+                if success {
+                    print("✓ Restored focus to \(previous.localizedName ?? "app")")
+                } else {
+                    print("✗ Failed to restore focus to \(previous.localizedName ?? "app")")
+                    // Fallback: hide ourselves to let system restore
+                    NSApp.hide(nil)
+                }
+            } else {
+                // No previous app or it terminated, hide ourselves
+                NSApp.hide(nil)
+                print("⚠ No previous app available, hiding ClaudeGesture")
+            }
+
+            // Clear the tracked app
+            self.previousActiveApp = nil
+        }
+    }
+
+    /// Update status icon to show hook-controlled state
+    private func updateStatusIconForHookState(active: Bool) {
+        guard settings.cameraControlMode == .hookControlled,
+              let button = statusItem?.button else { return }
+
+        if active {
+            button.image = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control Active")
+        } else {
+            button.image = NSImage(systemSymbolName: "hand.raised", accessibilityDescription: "Gesture Control Standby")
+        }
     }
 
     /// Setup the menubar status item and popover
@@ -79,8 +225,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Update menubar icon to show gesture feedback
     private func updateStatusIcon(for gesture: Gesture) {
-        let originalImage = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control")
-
         // Change icon color briefly
         if let button = statusItem?.button {
             let feedbackImage: NSImage?
@@ -97,9 +241,18 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
             button.image = feedbackImage
 
-            // Restore original icon after delay
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                button.image = originalImage
+            // Restore icon after delay, respecting current mode and camera state
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                guard let self = self else { return }
+                let restoredImage: NSImage?
+                if self.settings.cameraControlMode == .hookControlled && !self.cameraManager.isRunning {
+                    // Hook mode with camera stopped: show standby (unfilled) icon
+                    restoredImage = NSImage(systemSymbolName: "hand.raised", accessibilityDescription: "Gesture Control Standby")
+                } else {
+                    // Manual mode or camera running: show active (filled) icon
+                    restoredImage = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control")
+                }
+                button.image = restoredImage
             }
         }
     }

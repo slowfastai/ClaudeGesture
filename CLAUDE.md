@@ -60,3 +60,35 @@ The `Gesture` enum defines recognized gestures and their mapped actions:
 - `gestureHoldDuration`: Seconds gesture must be held before triggering
 - `gestureCooldown`: Seconds between repeated triggers
 - `deepgramApiKey`: For voice transcription API
+- `cameraControlMode`: Manual or hook-controlled camera activation
+
+### Hook-Controlled Camera Mode
+
+ClaudeGesture supports automatic camera activation via Claude Code hooks. When enabled, the camera only runs while Claude is waiting for user input.
+
+**URL Scheme:** `claudegesture://camera/start` and `claudegesture://camera/stop`
+
+**Claude Code Hooks** (add to `~/.claude/settings.json` for global, or `.claude/settings.json` for project-specific):
+```json
+{
+  "hooks": {
+    "Stop": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "open 'claudegesture://camera/start'", "timeout": 5 }]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "matcher": "",
+        "hooks": [{ "type": "command", "command": "open 'claudegesture://camera/stop'", "timeout": 5 }]
+      }
+    ]
+  }
+}
+```
+
+**Setup:**
+1. Run ClaudeGesture and grant camera permission (do this before relying on hooks)
+2. Enable master toggle and select "Hook-Controlled" mode
+3. Camera activates when Claude finishes responding, deactivates when you submit

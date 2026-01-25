@@ -32,5 +32,16 @@
     <string>Copyright © 2024. All rights reserved.</string>
     <key>NSPrincipalClass</key>
     <string>NSApplication</string>
+    <key>CFBundleURLTypes</key>
+    <array>
+        <dict>
+            <key>CFBundleURLName</key>
+            <string>com.claudegesture.control</string>
+            <key>CFBundleURLSchemes</key>
+            <array>
+                <string>claudegesture</string>
+            </array>
+        </dict>
+    </array>
 </dict>
 </plist>

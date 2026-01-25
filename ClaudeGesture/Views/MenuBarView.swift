@@ -10,6 +10,17 @@ struct MenuBarView: View {
 
     @State private var showSettings = false
 
+    /// Camera status text based on mode and state
+    private var cameraStatusText: String {
+        if cameraManager.isRunning {
+            return "Active"
+        } else if settings.cameraControlMode == .hookControlled {
+            return "Waiting for hook..."
+        } else {
+            return "Inactive"
+        }
+    }
+
     var body: some View {
         VStack(spacing: 16) {
             // Header
@@ -27,7 +38,21 @@ struct MenuBarView: View {
 
             Divider()
 
-            // Enable/Disable Toggle
+            // Control Mode Picker
+            VStack(alignment: .leading, spacing: 4) {
+                Picker("Control Mode", selection: $settings.cameraControlMode) {
+                    ForEach(CameraControlMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+
+                Text(settings.cameraControlMode.description)
+                    .font(.caption2)
+                    .foregroundColor(.secondary)
+            }
+
+            // Enable/Disable Toggle (master gate)
             Toggle(isOn: $settings.isEnabled) {
                 HStack {
                     Image(systemName: settings.isEnabled ? "checkmark.circle.fill" : "circle")
@@ -37,10 +62,29 @@ struct MenuBarView: View {
             }
             .toggleStyle(.switch)
             .onChange(of: settings.isEnabled) { _, newValue in
-                if newValue {
-                    cameraManager.start()
+                // In manual mode: toggle directly controls camera
+                // In hook-controlled mode: toggle is just a master gate
+                if settings.cameraControlMode == .manual {
+                    if newValue {
+                        cameraManager.start()
+                    } else {
+                        cameraManager.stop()
+                    }
                 } else {
+                    // Hook-controlled: stop camera when disabled, but don't auto-start
+                    if !newValue {
+                        cameraManager.stop()
+                    }
+                }
+            }
+            .onChange(of: settings.cameraControlMode) { _, newMode in
+                // When switching modes, stop camera to reset state
+                if cameraManager.isRunning {
                     cameraManager.stop()
+                }
+                // In manual mode with enabled toggle, start camera
+                if newMode == .manual && settings.isEnabled {
+                    cameraManager.start()
                 }
             }
 
@@ -52,7 +96,7 @@ struct MenuBarView: View {
                         StatusRow(
                             icon: cameraManager.isRunning ? "camera.fill" : "camera",
                             title: "Camera",
-                            status: cameraManager.isRunning ? "Active" : "Inactive",
+                            status: cameraStatusText,
                             color: cameraManager.isRunning ? .green : .secondary
                         )
 
