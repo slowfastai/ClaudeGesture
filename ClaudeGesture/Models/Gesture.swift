@@ -10,6 +10,8 @@ enum Gesture: String, CaseIterable {
     case fiveFingers = "Five Fingers"
     case closedFist = "Closed Fist"
     case thumbsUp = "Thumbs Up"
+    case thumbsDown = "Thumbs Down"
+    case pinkyUp = "Pinky Up"
     case none = "None"
 
     /// The key code or action associated with this gesture
@@ -22,6 +24,8 @@ enum Gesture: String, CaseIterable {
         case .fiveFingers: return 23      // Key "5"
         case .closedFist: return 48       // Tab key (with Shift modifier)
         case .thumbsUp: return nil        // Special: triggers voice input
+        case .thumbsDown: return 53       // Escape key
+        case .pinkyUp: return 36          // Enter/Return key
         case .none: return nil
         }
     }
@@ -49,6 +53,8 @@ enum Gesture: String, CaseIterable {
         case .fiveFingers: return "✋"
         case .closedFist: return "✊"
         case .thumbsUp: return "👍"
+        case .thumbsDown: return "👎"
+        case .pinkyUp: return "🤙"
         case .none: return "❓"
         }
     }
@@ -63,6 +69,8 @@ enum Gesture: String, CaseIterable {
         case .fiveFingers: return "Type '5'"
         case .closedFist: return "Press Shift+Tab"
         case .thumbsUp: return "Toggle Voice Input"
+        case .thumbsDown: return "Press Escape"
+        case .pinkyUp: return "Press Enter"
         case .none: return "No action"
         }
     }
