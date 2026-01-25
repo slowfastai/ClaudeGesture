@@ -1,6 +1,26 @@
 import Foundation
 import SwiftUI
 
+/// Camera control mode
+enum CameraControlMode: String, CaseIterable {
+    case manual = "manual"
+    case hookControlled = "hookControlled"
+
+    var displayName: String {
+        switch self {
+        case .manual: return "Manual"
+        case .hookControlled: return "Hook-Controlled"
+        }
+    }
+
+    var description: String {
+        switch self {
+        case .manual: return "Toggle controls camera directly"
+        case .hookControlled: return "Claude Code hooks control camera"
+        }
+    }
+}
+
 /// User preferences and settings
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
@@ -15,6 +35,7 @@ class AppSettings: ObservableObject {
         static let gestureCooldown = "gestureCooldown"
         static let deepgramApiKey = "deepgramApiKey"
         static let showCameraPreview = "showCameraPreview"
+        static let cameraControlMode = "cameraControlMode"
     }
 
     /// Whether gesture recognition is enabled
@@ -59,6 +80,13 @@ class AppSettings: ObservableObject {
         }
     }
 
+    /// Camera control mode (manual or hook-controlled)
+    @Published var cameraControlMode: CameraControlMode {
+        didSet {
+            defaults.set(cameraControlMode.rawValue, forKey: Keys.cameraControlMode)
+        }
+    }
+
     private init() {
         // Load saved values or use defaults
         self.isEnabled = defaults.object(forKey: Keys.isEnabled) as? Bool ?? false
@@ -67,6 +95,12 @@ class AppSettings: ObservableObject {
         self.gestureCooldown = defaults.object(forKey: Keys.gestureCooldown) as? Double ?? 0.5
         self.deepgramApiKey = defaults.string(forKey: Keys.deepgramApiKey) ?? ""
         self.showCameraPreview = defaults.object(forKey: Keys.showCameraPreview) as? Bool ?? true
+        if let modeString = defaults.string(forKey: Keys.cameraControlMode),
+           let mode = CameraControlMode(rawValue: modeString) {
+            self.cameraControlMode = mode
+        } else {
+            self.cameraControlMode = .manual
+        }
     }
 
     /// Reset all settings to defaults
@@ -77,5 +111,6 @@ class AppSettings: ObservableObject {
         gestureCooldown = 0.5
         deepgramApiKey = ""
         showCameraPreview = true
+        cameraControlMode = .manual
     }
 }
