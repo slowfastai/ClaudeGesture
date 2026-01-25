@@ -260,9 +260,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             case .thumbsUp:
                 feedbackImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Voice Input")
             case .closedFist:
-                feedbackImage = NSImage(systemSymbolName: "escape", accessibilityDescription: "Escape")
-            case .openPalm:
-                feedbackImage = NSImage(systemSymbolName: "arrow.right.to.line", accessibilityDescription: "Tab")
+                feedbackImage = NSImage(systemSymbolName: "arrow.left.to.line", accessibilityDescription: "Shift+Tab")
+            case .fourFingers, .fiveFingers:
+                feedbackImage = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "Number Key")
             default:
                 feedbackImage = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "Key Press")
             }

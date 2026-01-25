@@ -100,12 +100,16 @@ class GestureDetector: ObservableObject {
                 // Thumbs up: only thumb extended
                 detectedGesture = .thumbsUp
                 confidence = thumbTip.confidence
+            } else if thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
+                // Five fingers: all fingers extended including thumb
+                detectedGesture = .fiveFingers
+                confidence = (thumbTip.confidence + indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 5
             } else if !thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
-                // Open palm: all four fingers extended (excluding thumb)
-                detectedGesture = .openPalm
+                // Four fingers: all four fingers extended (excluding thumb)
+                detectedGesture = .fourFingers
                 confidence = (indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 4
             } else if !indexExtended && !middleExtended && !ringExtended && !littleExtended {
-                // Closed fist: no fingers extended
+                // Closed fist: no fingers extended (triggers Shift+Tab)
                 detectedGesture = .closedFist
                 confidence = 0.8
             } else if indexExtended && !middleExtended && !ringExtended && !littleExtended {

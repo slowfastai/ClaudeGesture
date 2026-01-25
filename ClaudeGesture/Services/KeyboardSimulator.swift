@@ -30,8 +30,38 @@ class KeyboardSimulator: ObservableObject {
     /// Simulate a key press for the given gesture
     func simulateKey(for gesture: Gesture) {
         guard let keyCode = gesture.keyCode else { return }
-        simulateKeyPress(keyCode: keyCode)
+
+        if let modifiers = gesture.modifiers {
+            simulateKeyWithModifiers(keyCode: keyCode, modifiers: modifiers)
+        } else {
+            simulateKeyPress(keyCode: keyCode)
+        }
         lastKeyPressed = gesture.actionDescription
+    }
+
+    /// Simulate pressing a key with modifier keys (e.g., Shift+Tab)
+    func simulateKeyWithModifiers(keyCode: UInt16, modifiers: CGEventFlags) {
+        guard accessibilityGranted else {
+            print("Accessibility permissions not granted")
+            requestAccessibilityPermissions()
+            return
+        }
+
+        let source = CGEventSource(stateID: .hidSystemState)
+
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: true),
+              let keyUp = CGEvent(keyboardEventSource: source, virtualKey: keyCode, keyDown: false) else {
+            print("Failed to create key events with modifiers")
+            return
+        }
+
+        keyDown.flags = modifiers
+        keyUp.flags = modifiers
+
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
+
+        print("Simulated key press: \(keyCode) with modifiers: \(modifiers)")
     }
 
     /// Simulate pressing and releasing a key
@@ -102,6 +132,8 @@ extension KeyboardSimulator {
         static let key1: UInt16 = 18
         static let key2: UInt16 = 19
         static let key3: UInt16 = 20
+        static let key4: UInt16 = 21
+        static let key5: UInt16 = 23
         static let tab: UInt16 = 48
         static let escape: UInt16 = 53
         static let space: UInt16 = 49
