@@ -13,12 +13,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let voiceInputManager = VoiceInputManager()
     let settings = AppSettings.shared
 
+    // Track the previously active app for focus restoration
+    private var previousActiveApp: NSRunningApplication?
+
     func applicationDidFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         setupMenuBar()
         setupGestureHandling()
         setupURLHandler()
+        setupFocusTracking()
         checkPermissions()
+    }
+
+    /// Track when another app is about to lose focus to us
+    private func setupFocusTracking() {
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(appWillBecomeActive),
+            name: NSApplication.willBecomeActiveNotification,
+            object: nil
+        )
+    }
+
+    /// Capture the frontmost app BEFORE we become active (critical for focus restoration)
+    @objc private func appWillBecomeActive(_ notification: Notification) {
+        // At this moment, we're about to become active but haven't yet
+        // So frontmostApplication is still the PREVIOUS app
+        let frontmost = NSWorkspace.shared.frontmostApplication
+
+        // Only capture if it's not ourselves (avoid self-reference)
+        if frontmost?.bundleIdentifier != Bundle.main.bundleIdentifier {
+            previousActiveApp = frontmost
+            print("📍 Captured previous app: \(frontmost?.localizedName ?? "unknown")")
+        }
     }
 
     /// Register handler for custom URL scheme (claudegesture://)
@@ -33,6 +60,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Handle incoming URL events (claudegesture://camera/start or claudegesture://camera/stop)
     @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
+        // Note: previousActiveApp is already captured by appWillBecomeActive notification
+        // which fires BEFORE we become active (correct timing for focus restoration)
+
         guard let urlString = event.paramDescriptor(forKeyword: AEKeyword(keyDirectObject))?.stringValue,
               let url = URL(string: urlString) else {
             return
@@ -55,6 +85,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         default:
             print("Unknown camera command: \(command)")
         }
+
+        // Restore focus to previous app to prevent focus stealing
+        restoreFocusToPreviousApp()
     }
 
     /// Handle camera start command from URL scheme
@@ -87,6 +120,36 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         if cameraManager.isRunning {
             cameraManager.stop()
             print("Camera stopped via hook")
+        }
+    }
+
+    /// Restore focus to the previous app to prevent focus stealing from URL scheme activation
+    private func restoreFocusToPreviousApp() {
+        // Use a small delay to ensure URL event is fully processed
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) { [weak self] in
+            guard let self = self else { return }
+
+            // Deactivate ourselves first
+            NSApp.deactivate()
+
+            // Restore focus to the previously tracked app
+            if let previous = self.previousActiveApp, !previous.isTerminated {
+                let success = previous.activate(options: [.activateIgnoringOtherApps])
+                if success {
+                    print("✓ Restored focus to \(previous.localizedName ?? "app")")
+                } else {
+                    print("✗ Failed to restore focus to \(previous.localizedName ?? "app")")
+                    // Fallback: hide ourselves to let system restore
+                    NSApp.hide(nil)
+                }
+            } else {
+                // No previous app or it terminated, hide ourselves
+                NSApp.hide(nil)
+                print("⚠ No previous app available, hiding ClaudeGesture")
+            }
+
+            // Clear the tracked app
+            self.previousActiveApp = nil
         }
     }
 
