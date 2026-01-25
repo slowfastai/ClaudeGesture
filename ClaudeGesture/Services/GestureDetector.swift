@@ -105,8 +105,8 @@ class GestureDetector: ObservableObject {
                 // Thumbs down: only thumb extended downward
                 detectedGesture = .thumbsDown
                 confidence = thumbTip.confidence
-            } else if !indexExtended && !middleExtended && !ringExtended && littleExtended {
-                // Pinky up: only little finger extended
+            } else if !thumbExtended && !thumbDown && !indexExtended && !middleExtended && !ringExtended && littleExtended {
+                // Pinky up: only little finger extended (thumb must be tucked)
                 detectedGesture = .pinkyUp
                 confidence = littleTip.confidence
             } else if thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
