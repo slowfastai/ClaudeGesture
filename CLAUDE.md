@@ -40,10 +40,11 @@ CameraManager → GestureDetector → AppDelegate.handleGesture() → KeyboardSi
 ### Gesture Recognition
 
 The `Gesture` enum defines recognized gestures and their mapped actions:
-- Finger counts map to key codes (1-3 fingers → "1", "2", "3" keys)
-- Open palm → Tab key
-- Closed fist → Escape key
+- Finger counts map to key codes (1-5 fingers → "1", "2", "3", "4", "5" keys)
+- Closed fist → Shift+Tab
 - Thumbs up → Toggle voice input mode
+- Thumbs down → Escape key
+- Pinky up → Enter key
 
 `GestureDetector` uses Vision framework finger tip positions relative to PIP joints to determine which fingers are extended.
 

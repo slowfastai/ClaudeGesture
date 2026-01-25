@@ -259,10 +259,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             switch gesture {
             case .thumbsUp:
                 feedbackImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Voice Input")
-            case .closedFist:
+            case .thumbsDown:
                 feedbackImage = NSImage(systemSymbolName: "escape", accessibilityDescription: "Escape")
-            case .openPalm:
-                feedbackImage = NSImage(systemSymbolName: "arrow.right.to.line", accessibilityDescription: "Tab")
+            case .pinkyUp:
+                feedbackImage = NSImage(systemSymbolName: "return", accessibilityDescription: "Enter")
+            case .closedFist:
+                feedbackImage = NSImage(systemSymbolName: "arrow.left.to.line", accessibilityDescription: "Shift+Tab")
+            case .fourFingers, .fiveFingers:
+                feedbackImage = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "Number Key")
             default:
                 feedbackImage = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "Key Press")
             }

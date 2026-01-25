@@ -1,13 +1,17 @@
 import Foundation
+import CoreGraphics
 
 /// Represents the different gestures that can be recognized
 enum Gesture: String, CaseIterable {
     case oneFingerUp = "One Finger"
     case peaceSign = "Peace Sign"
     case threeFingers = "Three Fingers"
-    case openPalm = "Open Palm"
+    case fourFingers = "Four Fingers"
+    case fiveFingers = "Five Fingers"
     case closedFist = "Closed Fist"
     case thumbsUp = "Thumbs Up"
+    case thumbsDown = "Thumbs Down"
+    case pinkyUp = "Pinky Up"
     case none = "None"
 
     /// The key code or action associated with this gesture
@@ -16,10 +20,21 @@ enum Gesture: String, CaseIterable {
         case .oneFingerUp: return 18      // Key "1"
         case .peaceSign: return 19        // Key "2"
         case .threeFingers: return 20     // Key "3"
-        case .openPalm: return 48         // Tab key
-        case .closedFist: return 53       // Escape key
+        case .fourFingers: return 21      // Key "4"
+        case .fiveFingers: return 23      // Key "5"
+        case .closedFist: return 48       // Tab key (with Shift modifier)
         case .thumbsUp: return nil        // Special: triggers voice input
+        case .thumbsDown: return 53       // Escape key
+        case .pinkyUp: return 36          // Enter/Return key
         case .none: return nil
+        }
+    }
+
+    /// Modifier keys to apply with the key code
+    var modifiers: CGEventFlags? {
+        switch self {
+        case .closedFist: return .maskShift
+        default: return nil
         }
     }
 
@@ -34,9 +49,12 @@ enum Gesture: String, CaseIterable {
         case .oneFingerUp: return "☝️"
         case .peaceSign: return "✌️"
         case .threeFingers: return "🤟"
-        case .openPalm: return "👋"
+        case .fourFingers: return "🖐️"
+        case .fiveFingers: return "✋"
         case .closedFist: return "✊"
         case .thumbsUp: return "👍"
+        case .thumbsDown: return "👎"
+        case .pinkyUp: return "🤙"
         case .none: return "❓"
         }
     }
@@ -47,9 +65,12 @@ enum Gesture: String, CaseIterable {
         case .oneFingerUp: return "Type '1'"
         case .peaceSign: return "Type '2'"
         case .threeFingers: return "Type '3'"
-        case .openPalm: return "Press Tab"
-        case .closedFist: return "Press Escape"
+        case .fourFingers: return "Type '4'"
+        case .fiveFingers: return "Type '5'"
+        case .closedFist: return "Press Shift+Tab"
         case .thumbsUp: return "Toggle Voice Input"
+        case .thumbsDown: return "Press Escape"
+        case .pinkyUp: return "Press Enter"
         case .none: return "No action"
         }
     }

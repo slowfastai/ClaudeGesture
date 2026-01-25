@@ -84,6 +84,7 @@ class GestureDetector: ObservableObject {
 
             // Determine which fingers are extended
             let thumbExtended = thumbTip.y > thumbIP.y + 0.05
+            let thumbDown = thumbTip.y < thumbIP.y - 0.05
             let indexExtended = indexTip.y > indexPIP.y + 0.03
             let middleExtended = middleTip.y > middlePIP.y + 0.03
             let ringExtended = ringTip.y > ringPIP.y + 0.03
@@ -97,15 +98,27 @@ class GestureDetector: ObservableObject {
             let confidence: Float
 
             if thumbExtended && !indexExtended && !middleExtended && !ringExtended && !littleExtended {
-                // Thumbs up: only thumb extended
+                // Thumbs up: only thumb extended upward
                 detectedGesture = .thumbsUp
                 confidence = thumbTip.confidence
+            } else if thumbDown && !indexExtended && !middleExtended && !ringExtended && !littleExtended {
+                // Thumbs down: only thumb extended downward
+                detectedGesture = .thumbsDown
+                confidence = thumbTip.confidence
+            } else if !thumbExtended && !thumbDown && !indexExtended && !middleExtended && !ringExtended && littleExtended {
+                // Pinky up: only little finger extended (thumb must be tucked)
+                detectedGesture = .pinkyUp
+                confidence = littleTip.confidence
+            } else if thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
+                // Five fingers: all fingers extended including thumb
+                detectedGesture = .fiveFingers
+                confidence = (thumbTip.confidence + indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 5
             } else if !thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
-                // Open palm: all four fingers extended (excluding thumb)
-                detectedGesture = .openPalm
+                // Four fingers: all four fingers extended (excluding thumb)
+                detectedGesture = .fourFingers
                 confidence = (indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 4
             } else if !indexExtended && !middleExtended && !ringExtended && !littleExtended {
-                // Closed fist: no fingers extended
+                // Closed fist: no fingers extended (triggers Shift+Tab)
                 detectedGesture = .closedFist
                 confidence = 0.8
             } else if indexExtended && !middleExtended && !ringExtended && !littleExtended {
