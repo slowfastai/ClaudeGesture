@@ -82,16 +82,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             gestureDetector: gestureDetector
         )
 
-        // Observe floating preview and camera preview settings
-        settings.$floatingPreviewEnabled
-            .combineLatest(settings.$showCameraPreview)
+        // Observe camera preview mode setting
+        settings.$cameraPreviewMode
             .receive(on: DispatchQueue.main)
-            .sink { [weak self] floatingEnabled, showPreview in
-                guard let self = self else { return }
-                if floatingEnabled && showPreview {
-                    self.floatingPreviewController?.show()
+            .sink { [weak self] mode in
+                if mode == .floating {
+                    self?.floatingPreviewController?.show()
                 } else {
-                    self.floatingPreviewController?.hide()
+                    self?.floatingPreviewController?.hide()
                 }
             }
             .store(in: &cancellables)

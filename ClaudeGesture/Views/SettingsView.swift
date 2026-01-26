@@ -65,27 +65,19 @@ struct SettingsView: View {
                     .font(.caption)
             }
 
-            // Camera Preview Toggle
-            Toggle(isOn: $settings.showCameraPreview) {
-                Text("Show Camera Preview")
+            // Camera Preview Mode
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Camera Preview")
                     .font(.caption)
-            }
-            .toggleStyle(.switch)
-            .controlSize(.small)
-
-            // Floating Preview Toggle
-            Toggle(isOn: $settings.floatingPreviewEnabled) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Use Floating Preview Window")
-                        .font(.caption)
-                    Text("Separate draggable window")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
+                    .foregroundColor(.secondary)
+                Picker("Camera Preview", selection: $settings.cameraPreviewMode) {
+                    ForEach(CameraPreviewMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
                 }
+                .pickerStyle(.segmented)
+                .labelsHidden()
             }
-            .toggleStyle(.switch)
-            .controlSize(.small)
-            .disabled(!settings.showCameraPreview)
 
             Divider()
 

@@ -27,9 +27,10 @@ class FloatingPreviewWindowController: NSObject, NSWindowDelegate {
     func windowWillClose(_ notification: Notification) {
         // Save position regardless of how window is closed
         saveWindowPosition()
-        // Only disable preference for user-initiated close, not app termination
+        // Only change preference for user-initiated close, not app termination
+        // Fall back to popover mode (not off) when user closes the floating window
         if !isAppTerminating {
-            settings.floatingPreviewEnabled = false
+            settings.cameraPreviewMode = .popover
         }
     }
 
