@@ -21,6 +21,21 @@ enum CameraControlMode: String, CaseIterable {
     }
 }
 
+/// Camera preview mode
+enum CameraPreviewMode: String, CaseIterable {
+    case off = "off"
+    case popover = "popover"
+    case floating = "floating"
+
+    var displayName: String {
+        switch self {
+        case .off: return "Off"
+        case .popover: return "Popover"
+        case .floating: return "Floating"
+        }
+    }
+}
+
 /// User preferences and settings
 class AppSettings: ObservableObject {
     static let shared = AppSettings()
@@ -34,8 +49,10 @@ class AppSettings: ObservableObject {
         static let gestureHoldDuration = "gestureHoldDuration"
         static let gestureCooldown = "gestureCooldown"
         static let deepgramApiKey = "deepgramApiKey"
-        static let showCameraPreview = "showCameraPreview"
         static let cameraControlMode = "cameraControlMode"
+        static let cameraPreviewMode = "cameraPreviewMode"
+        // Legacy keys (for migration)
+        static let showCameraPreview = "showCameraPreview"
         static let floatingPreviewEnabled = "floatingPreviewEnabled"
     }
 
@@ -74,24 +91,17 @@ class AppSettings: ObservableObject {
         }
     }
 
-    /// Whether to show camera preview in the popover
-    @Published var showCameraPreview: Bool {
-        didSet {
-            defaults.set(showCameraPreview, forKey: Keys.showCameraPreview)
-        }
-    }
-
-    /// Whether to use floating preview window instead of popover preview
-    @Published var floatingPreviewEnabled: Bool {
-        didSet {
-            defaults.set(floatingPreviewEnabled, forKey: Keys.floatingPreviewEnabled)
-        }
-    }
-
     /// Camera control mode (manual or hook-controlled)
     @Published var cameraControlMode: CameraControlMode {
         didSet {
             defaults.set(cameraControlMode.rawValue, forKey: Keys.cameraControlMode)
+        }
+    }
+
+    /// Camera preview mode (off, popover, or floating)
+    @Published var cameraPreviewMode: CameraPreviewMode {
+        didSet {
+            defaults.set(cameraPreviewMode.rawValue, forKey: Keys.cameraPreviewMode)
         }
     }
 
@@ -102,13 +112,35 @@ class AppSettings: ObservableObject {
         self.gestureHoldDuration = defaults.object(forKey: Keys.gestureHoldDuration) as? Double ?? 0.3
         self.gestureCooldown = defaults.object(forKey: Keys.gestureCooldown) as? Double ?? 0.5
         self.deepgramApiKey = defaults.string(forKey: Keys.deepgramApiKey) ?? ""
-        self.showCameraPreview = defaults.object(forKey: Keys.showCameraPreview) as? Bool ?? true
-        self.floatingPreviewEnabled = defaults.object(forKey: Keys.floatingPreviewEnabled) as? Bool ?? false
         if let modeString = defaults.string(forKey: Keys.cameraControlMode),
            let mode = CameraControlMode(rawValue: modeString) {
             self.cameraControlMode = mode
         } else {
             self.cameraControlMode = .manual
+        }
+
+        // Handle cameraPreviewMode with migration from legacy settings
+        if let previewModeString = defaults.string(forKey: Keys.cameraPreviewMode),
+           let previewMode = CameraPreviewMode(rawValue: previewModeString) {
+            // New setting exists, use it
+            self.cameraPreviewMode = previewMode
+        } else {
+            // Migrate from legacy settings
+            let legacyShowPreview = defaults.object(forKey: Keys.showCameraPreview) as? Bool ?? true
+            let legacyFloatingEnabled = defaults.object(forKey: Keys.floatingPreviewEnabled) as? Bool ?? false
+
+            if !legacyShowPreview {
+                self.cameraPreviewMode = .off
+            } else if legacyFloatingEnabled {
+                self.cameraPreviewMode = .floating
+            } else {
+                self.cameraPreviewMode = .popover
+            }
+
+            // Save the migrated value and clean up legacy keys
+            defaults.set(cameraPreviewMode.rawValue, forKey: Keys.cameraPreviewMode)
+            defaults.removeObject(forKey: Keys.showCameraPreview)
+            defaults.removeObject(forKey: Keys.floatingPreviewEnabled)
         }
     }
 
@@ -119,8 +151,7 @@ class AppSettings: ObservableObject {
         gestureHoldDuration = 0.3
         gestureCooldown = 0.5
         deepgramApiKey = ""
-        showCameraPreview = true
-        floatingPreviewEnabled = false
         cameraControlMode = .manual
+        cameraPreviewMode = .popover
     }
 }
