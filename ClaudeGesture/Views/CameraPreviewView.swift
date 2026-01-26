@@ -11,7 +11,6 @@ struct CameraPreviewView: NSViewRepresentable {
         if let layer = previewLayer {
             configurePreviewLayer(layer)
             layer.frame = view.bounds
-            layer.videoGravity = .resizeAspectFill
             view.layer?.addSublayer(layer)
         }
         return view
@@ -25,6 +24,7 @@ struct CameraPreviewView: NSViewRepresentable {
     }
 
     private func configurePreviewLayer(_ layer: AVCaptureVideoPreviewLayer) {
+        layer.videoGravity = .resizeAspectFill
         if let connection = layer.connection, connection.isVideoMirroringSupported {
             connection.automaticallyAdjustsVideoMirroring = false
             connection.isVideoMirrored = false

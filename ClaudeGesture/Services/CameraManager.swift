@@ -100,11 +100,6 @@ class CameraManager: NSObject, ObservableObject {
             // Create preview layer
             DispatchQueue.main.async {
                 self.previewLayer = AVCaptureVideoPreviewLayer(session: self.captureSession)
-                self.previewLayer?.videoGravity = .resizeAspectFill
-                if let connection = self.previewLayer?.connection {
-                    connection.automaticallyAdjustsVideoMirroring = false
-                    connection.isVideoMirrored = false
-                }
             }
         }
     }
