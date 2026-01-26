@@ -139,7 +139,7 @@ struct MenuBarView: View {
                 }
             }
 
-            if settings.showCameraPreview {
+            if settings.showCameraPreview && !settings.floatingPreviewEnabled {
                 CameraPreviewWithOverlay(
                     cameraManager: cameraManager,
                     gestureDetector: gestureDetector

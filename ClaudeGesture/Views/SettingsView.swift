@@ -73,6 +73,20 @@ struct SettingsView: View {
             .toggleStyle(.switch)
             .controlSize(.small)
 
+            // Floating Preview Toggle
+            Toggle(isOn: $settings.floatingPreviewEnabled) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Use Floating Preview Window")
+                        .font(.caption)
+                    Text("Separate draggable window")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                }
+            }
+            .toggleStyle(.switch)
+            .controlSize(.small)
+            .disabled(!settings.showCameraPreview)
+
             Divider()
 
             // Reset Button

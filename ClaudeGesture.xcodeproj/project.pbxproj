@@ -19,6 +19,7 @@
 		A1000010001 /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010000 /* Gesture.swift */; };
 		A1000011001 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000 /* Settings.swift */; };
 		A1000012001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000012000 /* Assets.xcassets */; };
+		A1000015001 /* FloatingPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000015000 /* FloatingPreviewWindow.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		A1000012000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1000013000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000014000 /* ClaudeGesture.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeGesture.entitlements; sourceTree = "<group>"; };
+		A1000015000 /* FloatingPreviewWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPreviewWindow.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -95,6 +97,7 @@
 				A1000003000 /* MenuBarView.swift */,
 				A1000004000 /* SettingsView.swift */,
 				A1000005000 /* CameraPreviewView.swift */,
+				A1000015000 /* FloatingPreviewWindow.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -207,6 +210,7 @@
 				A1000009001 /* VoiceInputManager.swift in Sources */,
 				A1000010001 /* Gesture.swift in Sources */,
 				A1000011001 /* Settings.swift in Sources */,
+				A1000015001 /* FloatingPreviewWindow.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

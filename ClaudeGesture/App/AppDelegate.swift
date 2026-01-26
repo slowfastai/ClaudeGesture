@@ -14,6 +14,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let voiceInputManager = VoiceInputManager()
     let settings = AppSettings.shared
 
+    // Floating preview window controller
+    var floatingPreviewController: FloatingPreviewWindowController?
+
     // Track the previously active app for focus restoration
     private var previousActiveApp: NSRunningApplication?
 
@@ -30,6 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupURLHandler()
         setupFocusTracking()
         setupCameraStateObserver()
+        setupFloatingPreview()
         checkPermissions()
     }
 
@@ -67,6 +71,28 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self,
                       self.settings.cameraControlMode == .hookControlled else { return }
                 self.updateStatusIconForHookState(active: isRunning)
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Setup floating preview window and observe relevant state changes
+    private func setupFloatingPreview() {
+        floatingPreviewController = FloatingPreviewWindowController(
+            cameraManager: cameraManager,
+            gestureDetector: gestureDetector
+        )
+
+        // Observe floating preview and camera preview settings
+        settings.$floatingPreviewEnabled
+            .combineLatest(settings.$showCameraPreview)
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] floatingEnabled, showPreview in
+                guard let self = self else { return }
+                if floatingEnabled && showPreview {
+                    self.floatingPreviewController?.show()
+                } else {
+                    self.floatingPreviewController?.hide()
+                }
             }
             .store(in: &cancellables)
     }
@@ -310,6 +336,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Mark as terminating so windowWillClose doesn't reset the preference
+        floatingPreviewController?.isAppTerminating = true
+        // Save floating window position before terminating
+        floatingPreviewController?.saveWindowPosition()
         // Cleanup
         cameraManager.stop()
     }
