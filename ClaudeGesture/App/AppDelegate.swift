@@ -14,6 +14,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let voiceInputManager = VoiceInputManager()
     let settings = AppSettings.shared
 
+    // Floating preview window controller
+    var floatingPreviewController: FloatingPreviewWindowController?
+
     // Track the previously active app for focus restoration
     private var previousActiveApp: NSRunningApplication?
 
@@ -30,6 +33,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupURLHandler()
         setupFocusTracking()
         setupCameraStateObserver()
+        setupFloatingPreview()
         checkPermissions()
     }
 
@@ -67,6 +71,44 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 guard let self = self,
                       self.settings.cameraControlMode == .hookControlled else { return }
                 self.updateStatusIconForHookState(active: isRunning)
+            }
+            .store(in: &cancellables)
+    }
+
+    /// Setup floating preview window and observe relevant state changes
+    private func setupFloatingPreview() {
+        floatingPreviewController = FloatingPreviewWindowController(
+            cameraManager: cameraManager,
+            gestureDetector: gestureDetector
+        )
+
+        // Observe camera running state and floating preview setting
+        Publishers.CombineLatest(
+            cameraManager.$isRunning,
+            settings.$floatingPreviewEnabled
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] isRunning, floatingEnabled in
+            guard let self = self else { return }
+            // Also check showCameraPreview master toggle
+            if isRunning && floatingEnabled && self.settings.showCameraPreview {
+                self.floatingPreviewController?.show()
+            } else {
+                self.floatingPreviewController?.hide()
+            }
+        }
+        .store(in: &cancellables)
+
+        // Also observe showCameraPreview changes
+        settings.$showCameraPreview
+            .receive(on: DispatchQueue.main)
+            .sink { [weak self] showPreview in
+                guard let self = self else { return }
+                if !showPreview {
+                    self.floatingPreviewController?.hide()
+                } else if self.cameraManager.isRunning && self.settings.floatingPreviewEnabled {
+                    self.floatingPreviewController?.show()
+                }
             }
             .store(in: &cancellables)
     }
@@ -310,6 +352,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     func applicationWillTerminate(_ notification: Notification) {
+        // Mark as terminating so windowWillClose doesn't reset the preference
+        floatingPreviewController?.isAppTerminating = true
+        // Save floating window position before terminating
+        floatingPreviewController?.saveWindowPosition()
         // Cleanup
         cameraManager.stop()
     }

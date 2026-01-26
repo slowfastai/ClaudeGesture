@@ -36,6 +36,7 @@ class AppSettings: ObservableObject {
         static let deepgramApiKey = "deepgramApiKey"
         static let showCameraPreview = "showCameraPreview"
         static let cameraControlMode = "cameraControlMode"
+        static let floatingPreviewEnabled = "floatingPreviewEnabled"
     }
 
     /// Whether gesture recognition is enabled
@@ -80,6 +81,13 @@ class AppSettings: ObservableObject {
         }
     }
 
+    /// Whether to use floating preview window instead of popover preview
+    @Published var floatingPreviewEnabled: Bool {
+        didSet {
+            defaults.set(floatingPreviewEnabled, forKey: Keys.floatingPreviewEnabled)
+        }
+    }
+
     /// Camera control mode (manual or hook-controlled)
     @Published var cameraControlMode: CameraControlMode {
         didSet {
@@ -95,6 +103,7 @@ class AppSettings: ObservableObject {
         self.gestureCooldown = defaults.object(forKey: Keys.gestureCooldown) as? Double ?? 0.5
         self.deepgramApiKey = defaults.string(forKey: Keys.deepgramApiKey) ?? ""
         self.showCameraPreview = defaults.object(forKey: Keys.showCameraPreview) as? Bool ?? true
+        self.floatingPreviewEnabled = defaults.object(forKey: Keys.floatingPreviewEnabled) as? Bool ?? false
         if let modeString = defaults.string(forKey: Keys.cameraControlMode),
            let mode = CameraControlMode(rawValue: modeString) {
             self.cameraControlMode = mode
@@ -111,6 +120,7 @@ class AppSettings: ObservableObject {
         gestureCooldown = 0.5
         deepgramApiKey = ""
         showCameraPreview = true
+        floatingPreviewEnabled = false
         cameraControlMode = .manual
     }
 }
