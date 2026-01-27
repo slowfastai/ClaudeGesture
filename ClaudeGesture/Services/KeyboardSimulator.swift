@@ -8,8 +8,28 @@ class KeyboardSimulator: ObservableObject {
     @Published var lastKeyPressed: String = ""
     @Published var isFnKeyHeld = false
 
+    private var pollTimer: Timer?
+
     init() {
         checkAccessibilityPermissions()
+        startPollingIfNeeded()
+    }
+
+    deinit {
+        pollTimer?.invalidate()
+    }
+
+    private func startPollingIfNeeded() {
+        guard !accessibilityGranted, pollTimer == nil else { return }
+        pollTimer = Timer.scheduledTimer(withTimeInterval: 2.0, repeats: true) { [weak self] _ in
+            guard let self else { return }
+            let granted = AXIsProcessTrusted()
+            if granted {
+                self.accessibilityGranted = true
+                self.pollTimer?.invalidate()
+                self.pollTimer = nil
+            }
+        }
     }
 
     /// Check if accessibility permissions are granted
@@ -22,10 +42,7 @@ class KeyboardSimulator: ObservableObject {
     func requestAccessibilityPermissions() {
         let options = [kAXTrustedCheckOptionPrompt.takeUnretainedValue(): true] as CFDictionary
         _ = AXIsProcessTrustedWithOptions(options)
-        // Re-check after a short delay
-        DispatchQueue.main.asyncAfter(deadline: .now() + 1) { [weak self] in
-            self?.accessibilityGranted = AXIsProcessTrusted()
-        }
+        startPollingIfNeeded()
     }
 
     /// Simulate a key press for the given gesture
