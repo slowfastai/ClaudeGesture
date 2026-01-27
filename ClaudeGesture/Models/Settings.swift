@@ -107,7 +107,7 @@ class AppSettings: ObservableObject {
            let mode = CameraControlMode(rawValue: modeString) {
             self.cameraControlMode = mode
         } else {
-            self.cameraControlMode = .manual
+            self.cameraControlMode = .hookControlled
         }
 
         // Handle cameraPreviewMode with migration from legacy settings
@@ -148,7 +148,7 @@ class AppSettings: ObservableObject {
         gestureSensitivity = 0.7
         gestureHoldDuration = 0.3
         gestureCooldown = 0.5
-        cameraControlMode = .manual
+        cameraControlMode = .hookControlled
         cameraPreviewMode = .off
     }
 }
