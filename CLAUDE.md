@@ -15,6 +15,13 @@ xcodebuild -project ClaudeGesture.xcodeproj -scheme ClaudeGesture -configuration
 xcodebuild -project ClaudeGesture.xcodeproj -scheme ClaudeGesture clean build
 ```
 
+## Packaging
+
+```bash
+# Create a .dmg installer (requires: brew install create-dmg)
+./scripts/create-dmg.sh /path/to/ClaudeGesture.app
+```
+
 ## Architecture
 
 ClaudeGesture is a macOS menubar-only app for hands-free gesture control. It uses the Vision framework for hand pose detection and simulates keyboard input based on recognized gestures.
