@@ -3,8 +3,8 @@ import SwiftUI
 
 /// Camera control mode
 enum CameraControlMode: String, CaseIterable {
-    case manual = "manual"
     case hookControlled = "hookControlled"
+    case manual = "manual"
 
     var displayName: String {
         switch self {
