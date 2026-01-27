@@ -126,15 +126,19 @@ class AppSettings: ObservableObject {
             self.cameraPreviewMode = previewMode
         } else {
             // Migrate from legacy settings, preserving existing user preferences
-            let legacyFloatingEnabled = defaults.object(forKey: Keys.floatingPreviewEnabled) as? Bool ?? false
+            // showCameraPreview was the master switch in the old system
             let legacyShowPreview = defaults.object(forKey: Keys.showCameraPreview) as? Bool
+            let legacyFloatingEnabled = defaults.object(forKey: Keys.floatingPreviewEnabled) as? Bool ?? false
 
-            if legacyFloatingEnabled {
-                // User explicitly enabled floating preview - preserve it
+            if legacyShowPreview == false {
+                // User explicitly turned off preview - master switch takes priority
+                self.cameraPreviewMode = .off
+            } else if legacyFloatingEnabled {
+                // User wanted floating preview and didn't turn it off
                 self.cameraPreviewMode = .floating
-            } else if let showPreview = legacyShowPreview {
-                // User explicitly set show/hide preference
-                self.cameraPreviewMode = showPreview ? .popover : .off
+            } else if legacyShowPreview == true {
+                // User had preview on but not floating
+                self.cameraPreviewMode = .popover
             } else {
                 // New user (no legacy keys exist) - default to off
                 self.cameraPreviewMode = .off
