@@ -82,17 +82,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             gestureDetector: gestureDetector
         )
 
-        // Observe camera preview mode setting
-        settings.$cameraPreviewMode
-            .receive(on: DispatchQueue.main)
-            .sink { [weak self] mode in
-                if mode == .floating {
-                    self?.floatingPreviewController?.show()
-                } else {
-                    self?.floatingPreviewController?.hide()
-                }
+        // Observe all relevant state changes for floating preview visibility
+        Publishers.CombineLatest4(
+            settings.$cameraPreviewMode,
+            settings.$isEnabled,
+            settings.$cameraControlMode,
+            cameraManager.$isRunning
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] previewMode, isEnabled, controlMode, cameraRunning in
+            guard let self = self else { return }
+
+            // Floating preview should show when:
+            // 1. Preview mode is floating AND
+            // 2. Either: (manual mode AND enabled) OR (hook mode AND camera running)
+            let shouldShow = previewMode == .floating && (
+                (controlMode == .manual && isEnabled) ||
+                (controlMode == .hookControlled && cameraRunning)
+            )
+
+            if shouldShow {
+                self.floatingPreviewController?.show()
+            } else {
+                self.floatingPreviewController?.hide()
             }
-            .store(in: &cancellables)
+        }
+        .store(in: &cancellables)
     }
 
     /// Register handler for custom URL scheme (claudegesture://)
