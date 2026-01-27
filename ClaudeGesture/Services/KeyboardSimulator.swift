@@ -6,6 +6,7 @@ import ApplicationServices
 class KeyboardSimulator: ObservableObject {
     @Published var accessibilityGranted = false
     @Published var lastKeyPressed: String = ""
+    @Published var isFnKeyHeld = false
 
     init() {
         checkAccessibilityPermissions()
@@ -124,6 +125,57 @@ class KeyboardSimulator: ObservableObject {
 
         lastKeyPressed = "Typed: \(text.prefix(20))\(text.count > 20 ? "..." : "")"
     }
+
+    // MARK: - Fn Key Control (for Wispr Flow integration)
+
+    /// Press and hold the fn key (starts Wispr Flow recording)
+    func pressFnKey() {
+        guard accessibilityGranted else {
+            print("Accessibility permissions not granted")
+            requestAccessibilityPermissions()
+            return
+        }
+
+        let source = CGEventSource(stateID: .hidSystemState)
+        guard let keyDown = CGEvent(keyboardEventSource: source, virtualKey: KeyCodes.fnKey, keyDown: true) else {
+            print("Failed to create fn key down event")
+            return
+        }
+
+        keyDown.post(tap: .cghidEventTap)
+        isFnKeyHeld = true
+        lastKeyPressed = "Wispr Flow Active"
+        print("fn key pressed (Wispr Flow started)")
+    }
+
+    /// Release the fn key (stops Wispr Flow, triggers transcription)
+    func releaseFnKey() {
+        guard accessibilityGranted else {
+            print("Accessibility permissions not granted")
+            requestAccessibilityPermissions()
+            return
+        }
+
+        let source = CGEventSource(stateID: .hidSystemState)
+        guard let keyUp = CGEvent(keyboardEventSource: source, virtualKey: KeyCodes.fnKey, keyDown: false) else {
+            print("Failed to create fn key up event")
+            return
+        }
+
+        keyUp.post(tap: .cghidEventTap)
+        isFnKeyHeld = false
+        lastKeyPressed = "Wispr Flow Released"
+        print("fn key released (Wispr Flow stopped)")
+    }
+
+    /// Toggle fn key state (for thumbs up gesture)
+    func toggleFnKey() {
+        if isFnKeyHeld {
+            releaseFnKey()
+        } else {
+            pressFnKey()
+        }
+    }
 }
 
 // MARK: - Key Code Constants
@@ -138,5 +190,6 @@ extension KeyboardSimulator {
         static let escape: UInt16 = 53
         static let space: UInt16 = 49
         static let returnKey: UInt16 = 36
+        static let fnKey: UInt16 = 0x3F  // 63 decimal
     }
 }

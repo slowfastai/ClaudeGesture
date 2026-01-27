@@ -48,7 +48,6 @@ class AppSettings: ObservableObject {
         static let gestureSensitivity = "gestureSensitivity"
         static let gestureHoldDuration = "gestureHoldDuration"
         static let gestureCooldown = "gestureCooldown"
-        static let deepgramApiKey = "deepgramApiKey"
         static let cameraControlMode = "cameraControlMode"
         static let cameraPreviewMode = "cameraPreviewMode"
         // Legacy keys (for migration)
@@ -84,13 +83,6 @@ class AppSettings: ObservableObject {
         }
     }
 
-    /// Deepgram API key for voice transcription
-    @Published var deepgramApiKey: String {
-        didSet {
-            defaults.set(deepgramApiKey, forKey: Keys.deepgramApiKey)
-        }
-    }
-
     /// Camera control mode (manual or hook-controlled)
     @Published var cameraControlMode: CameraControlMode {
         didSet {
@@ -111,7 +103,6 @@ class AppSettings: ObservableObject {
         self.gestureSensitivity = defaults.object(forKey: Keys.gestureSensitivity) as? Double ?? 0.7
         self.gestureHoldDuration = defaults.object(forKey: Keys.gestureHoldDuration) as? Double ?? 0.3
         self.gestureCooldown = defaults.object(forKey: Keys.gestureCooldown) as? Double ?? 0.5
-        self.deepgramApiKey = defaults.string(forKey: Keys.deepgramApiKey) ?? ""
         if let modeString = defaults.string(forKey: Keys.cameraControlMode),
            let mode = CameraControlMode(rawValue: modeString) {
             self.cameraControlMode = mode
@@ -157,7 +148,6 @@ class AppSettings: ObservableObject {
         gestureSensitivity = 0.7
         gestureHoldDuration = 0.3
         gestureCooldown = 0.5
-        deepgramApiKey = ""
         cameraControlMode = .manual
         cameraPreviewMode = .off
     }

@@ -11,7 +11,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     let cameraManager = CameraManager()
     let gestureDetector = GestureDetector()
     let keyboardSimulator = KeyboardSimulator()
-    let voiceInputManager = VoiceInputManager()
     let settings = AppSettings.shared
 
     // Floating preview window controller
@@ -250,8 +249,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             rootView: MenuBarView(
                 cameraManager: cameraManager,
                 gestureDetector: gestureDetector,
-                keyboardSimulator: keyboardSimulator,
-                voiceInputManager: voiceInputManager
+                keyboardSimulator: keyboardSimulator
             )
         )
     }
@@ -267,11 +265,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         gestureDetector.onGestureConfirmed = { [weak self] gesture in
             self?.handleGesture(gesture)
         }
-
-        // Handle voice transcription
-        voiceInputManager.onTranscriptionComplete = { [weak self] text in
-            self?.keyboardSimulator.typeText(text)
-        }
     }
 
     /// Handle a confirmed gesture
@@ -282,8 +275,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         updateStatusIcon(for: gesture)
 
         if gesture.triggersVoiceInput {
-            // Toggle voice recording
-            voiceInputManager.toggleRecording()
+            // Toggle fn key for Wispr Flow integration
+            keyboardSimulator.toggleFnKey()
         } else if let _ = gesture.keyCode {
             // Simulate key press
             keyboardSimulator.simulateKey(for: gesture)
