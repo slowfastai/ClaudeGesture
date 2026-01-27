@@ -26,6 +26,13 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
+        // Prevent multiple instances — quit if another ClaudeGesture is already running
+        let running = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier!)
+        if running.count > 1 {
+            NSApplication.shared.terminate(nil)
+            return
+        }
+
         NSApplication.shared.setActivationPolicy(.accessory)
         setupMenuBar()
         setupGestureHandling()

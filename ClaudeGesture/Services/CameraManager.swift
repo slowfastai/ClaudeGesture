@@ -8,7 +8,7 @@ class CameraManager: NSObject, ObservableObject {
     @Published var permissionGranted = false
     @Published var errorMessage: String?
 
-    private let captureSession = AVCaptureSession()
+    let captureSession = AVCaptureSession()
     private let videoOutput = AVCaptureVideoDataOutput()
     private let sessionQueue = DispatchQueue(label: "com.gesturecontrol.camera")
 

@@ -1,3 +1,4 @@
+import AVFoundation
 import Cocoa
 import SwiftUI
 
@@ -7,6 +8,8 @@ class FloatingPreviewWindowController: NSObject, NSWindowDelegate {
     private let cameraManager: CameraManager
     private let gestureDetector: GestureDetector
     private let settings = AppSettings.shared
+    /// Dedicated preview layer for the floating window (separate from popover's layer)
+    private lazy var floatingPreviewLayer = AVCaptureVideoPreviewLayer(session: cameraManager.captureSession)
 
     /// Set to true before app termination to prevent clearing the preference
     var isAppTerminating = false
@@ -89,7 +92,7 @@ class FloatingPreviewWindowController: NSObject, NSWindowDelegate {
         panel.isMovableByWindowBackground = true
         panel.titlebarAppearsTransparent = true
         panel.title = "Preview"
-        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
+        panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false
         panel.minSize = NSSize(width: 120, height: 90)
         panel.backgroundColor = .black
@@ -103,7 +106,8 @@ class FloatingPreviewWindowController: NSObject, NSWindowDelegate {
         // Host the SwiftUI camera preview
         let contentView = FloatingPreviewContentView(
             cameraManager: cameraManager,
-            gestureDetector: gestureDetector
+            gestureDetector: gestureDetector,
+            previewLayer: floatingPreviewLayer
         )
         panel.contentView = NSHostingView(rootView: contentView)
 
@@ -115,12 +119,13 @@ class FloatingPreviewWindowController: NSObject, NSWindowDelegate {
 struct FloatingPreviewContentView: View {
     @ObservedObject var cameraManager: CameraManager
     @ObservedObject var gestureDetector: GestureDetector
+    let previewLayer: AVCaptureVideoPreviewLayer
 
     var body: some View {
         GeometryReader { geometry in
             ZStack {
                 // Camera preview
-                if let previewLayer = cameraManager.previewLayer {
+                if cameraManager.isRunning {
                     CameraPreviewView(previewLayer: previewLayer)
                 } else {
                     Rectangle()
@@ -175,7 +180,8 @@ struct FloatingPreviewContentView: View {
 #Preview {
     FloatingPreviewContentView(
         cameraManager: CameraManager(),
-        gestureDetector: GestureDetector()
+        gestureDetector: GestureDetector(),
+        previewLayer: AVCaptureVideoPreviewLayer()
     )
     .frame(width: 200, height: 150)
 }
