@@ -126,7 +126,7 @@ class AppSettings: ObservableObject {
             self.cameraPreviewMode = previewMode
         } else {
             // Migrate from legacy settings
-            let legacyShowPreview = defaults.object(forKey: Keys.showCameraPreview) as? Bool ?? true
+            let legacyShowPreview = defaults.object(forKey: Keys.showCameraPreview) as? Bool ?? false
             let legacyFloatingEnabled = defaults.object(forKey: Keys.floatingPreviewEnabled) as? Bool ?? false
 
             if !legacyShowPreview {
@@ -152,6 +152,6 @@ class AppSettings: ObservableObject {
         gestureCooldown = 0.5
         deepgramApiKey = ""
         cameraControlMode = .manual
-        cameraPreviewMode = .popover
+        cameraPreviewMode = .off
     }
 }
