@@ -139,7 +139,21 @@ struct MenuBarView: View {
                 }
             }
 
-            if settings.cameraPreviewMode == .popover {
+            // Camera Preview Mode (always visible)
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Camera Preview")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Picker("Camera Preview", selection: $settings.cameraPreviewMode) {
+                    ForEach(CameraPreviewMode.allCases, id: \.self) { mode in
+                        Text(mode.displayName).tag(mode)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            if settings.cameraPreviewMode == .popover && cameraManager.isRunning {
                 CameraPreviewWithOverlay(
                     cameraManager: cameraManager,
                     gestureDetector: gestureDetector
