@@ -50,23 +50,6 @@ struct SettingsView: View {
 
             Divider()
 
-            // Deepgram API Key
-            VStack(alignment: .leading, spacing: 4) {
-                HStack {
-                    Text("Deepgram API Key")
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                    Spacer()
-                    Link("Get API Key", destination: URL(string: "https://deepgram.com")!)
-                        .font(.caption)
-                }
-                SecureField("Enter API key...", text: $settings.deepgramApiKey)
-                    .textFieldStyle(.roundedBorder)
-                    .font(.caption)
-            }
-
-            Divider()
-
             // Reset Button
             HStack {
                 Spacer()

@@ -6,7 +6,6 @@ struct MenuBarView: View {
     @ObservedObject var cameraManager: CameraManager
     @ObservedObject var gestureDetector: GestureDetector
     @ObservedObject var keyboardSimulator: KeyboardSimulator
-    @ObservedObject var voiceInputManager: VoiceInputManager
 
     @State private var showSettings = false
 
@@ -109,20 +108,13 @@ struct MenuBarView: View {
                             color: gestureDetector.currentGesture != .none ? .blue : .secondary
                         )
 
-                        // Voice Recording Status
-                        if voiceInputManager.isRecording {
+                        // Wispr Flow Status
+                        if keyboardSimulator.isFnKeyHeld {
                             StatusRow(
                                 icon: "mic.fill",
-                                title: "Voice",
-                                status: "Recording...",
+                                title: "Wispr Flow",
+                                status: "Active",
                                 color: .red
-                            )
-                        } else if voiceInputManager.isTranscribing {
-                            StatusRow(
-                                icon: "waveform",
-                                title: "Voice",
-                                status: "Transcribing...",
-                                color: .orange
                             )
                         }
 
@@ -181,9 +173,6 @@ struct MenuBarView: View {
 
             // Error Messages
             if let error = cameraManager.errorMessage {
-                ErrorRow(message: error)
-            }
-            if let error = voiceInputManager.errorMessage {
                 ErrorRow(message: error)
             }
 
@@ -315,7 +304,6 @@ struct GestureReferenceView: View {
     MenuBarView(
         cameraManager: CameraManager(),
         gestureDetector: GestureDetector(),
-        keyboardSimulator: KeyboardSimulator(),
-        voiceInputManager: VoiceInputManager()
+        keyboardSimulator: KeyboardSimulator()
     )
 }
