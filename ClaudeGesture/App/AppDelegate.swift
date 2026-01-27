@@ -90,21 +90,21 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             cameraManager.$isRunning
         )
         .receive(on: DispatchQueue.main)
-        .sink { [weak self] previewMode, isEnabled, controlMode, cameraRunning in
-            guard let self = self else { return }
+        .sink { [weak self] previewMode, _, _, cameraRunning in
+            // Defer to next run loop to avoid "Publishing changes from within view updates" warning
+            DispatchQueue.main.async {
+                guard let self = self else { return }
 
-            // Floating preview should show when:
-            // 1. Preview mode is floating AND
-            // 2. Either: (manual mode AND enabled) OR (hook mode AND camera running)
-            let shouldShow = previewMode == .floating && (
-                (controlMode == .manual && isEnabled) ||
-                (controlMode == .hookControlled && cameraRunning)
-            )
+                // Floating preview should show when:
+                // 1. Preview mode is floating AND
+                // 2. Camera is actually running (ensures frames are being captured)
+                let shouldShow = previewMode == .floating && cameraRunning
 
-            if shouldShow {
-                self.floatingPreviewController?.show()
-            } else {
-                self.floatingPreviewController?.hide()
+                if shouldShow {
+                    self.floatingPreviewController?.show()
+                } else {
+                    self.floatingPreviewController?.hide()
+                }
             }
         }
         .store(in: &cancellables)
