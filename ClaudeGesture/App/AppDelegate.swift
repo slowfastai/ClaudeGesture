@@ -288,6 +288,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             // Simulate key press
             keyboardSimulator.simulateKey(for: gesture)
         }
+
+        // In hook-controlled mode, auto-stop camera after number gestures (1-5).
+        // Selecting an option via keypress doesn't trigger the UserPromptSubmit
+        // hook, so camera/stop would never be sent otherwise.
+        if settings.cameraControlMode == .hookControlled,
+           cameraManager.isRunning,
+           gesture.isNumberGesture {
+            handleCameraStopCommand()
+        }
     }
 
     /// Update menubar icon to show gesture feedback

@@ -59,6 +59,16 @@ enum Gesture: String, CaseIterable {
         }
     }
 
+    /// Whether this is a number gesture (1-5) used for selecting options
+    var isNumberGesture: Bool {
+        switch self {
+        case .oneFingerUp, .peaceSign, .threeFingers, .fourFingers, .fiveFingers:
+            return true
+        default:
+            return false
+        }
+    }
+
     /// Description of what the gesture does
     var actionDescription: String {
         switch self {
