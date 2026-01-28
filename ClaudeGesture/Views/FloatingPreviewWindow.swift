@@ -92,7 +92,7 @@ class FloatingPreviewWindowController: NSObject, NSWindowDelegate {
         panel.isMovableByWindowBackground = true
         panel.titlebarAppearsTransparent = true
         panel.title = "Preview"
-        panel.collectionBehavior = [.moveToActiveSpace, .fullScreenAuxiliary]
+        panel.collectionBehavior = [.canJoinAllSpaces, .fullScreenAuxiliary]
         panel.isReleasedWhenClosed = false
         panel.minSize = NSSize(width: 120, height: 90)
         panel.backgroundColor = .black
