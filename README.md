@@ -67,7 +67,7 @@ Add this to `~/.claude/settings.json` (global) or `.claude/settings.json` (proje
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open 'claudegesture://camera/start'", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
       }
     ],
     "UserPromptSubmit": [
