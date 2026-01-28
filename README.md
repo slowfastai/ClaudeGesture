@@ -67,18 +67,20 @@ Add this to `~/.claude/settings.json` (global) or `.claude/settings.json` (proje
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
       }
     ],
     "UserPromptSubmit": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open 'claudegesture://camera/stop'", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g 'claudegesture://camera/stop'", "timeout": 5 }]
       }
     ]
   }
 }
 ```
+
+The `-g` flag prevents macOS from switching desktops when the hook runs.
 
 Then select **Hook-Controlled** mode in the ClaudeGesture settings.
 

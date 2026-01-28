@@ -85,18 +85,20 @@ The `pid` query parameter is optional. When provided, ClaudeGesture monitors the
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
       }
     ],
     "UserPromptSubmit": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open 'claudegesture://camera/stop'", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g 'claudegesture://camera/stop'", "timeout": 5 }]
       }
     ]
   }
 }
 ```
+
+The `-g` flag prevents macOS from activating ClaudeGesture and switching desktops when the hook runs. This ensures you stay on your current desktop regardless of where ClaudeGesture was launched.
 
 **Setup:**
 1. Run ClaudeGesture and grant camera permission (do this before relying on hooks)
