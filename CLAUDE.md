@@ -74,7 +74,9 @@ The `Gesture` enum defines recognized gestures and their mapped actions:
 
 ClaudeGesture supports automatic camera activation via Claude Code hooks. When enabled, the camera only runs while Claude is waiting for user input.
 
-**URL Scheme:** `claudegesture://camera/start` and `claudegesture://camera/stop`
+**URL Scheme:** `claudegesture://camera/start?pid=<PID>` and `claudegesture://camera/stop`
+
+The `pid` query parameter is optional. When provided, ClaudeGesture monitors the process and auto-stops the camera if it exits (e.g., user kills Claude Code with ctrl+c). Old hooks without `?pid=` still work, just without auto-stop on session termination.
 
 **Claude Code Hooks** (add to `~/.claude/settings.json` for global, or `.claude/settings.json` for project-specific):
 ```json
@@ -83,7 +85,7 @@ ClaudeGesture supports automatic camera activation via Claude Code hooks. When e
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open 'claudegesture://camera/start'", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
       }
     ],
     "UserPromptSubmit": [

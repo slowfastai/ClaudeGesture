@@ -22,6 +22,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Track when we were last activated (to determine if URL event caused activation)
     private var lastActivationTime: Date?
 
+    // Monitors Claude Code process to auto-stop camera on exit
+    private var processMonitor: ProcessMonitor?
+
     // Combine cancellables for observing camera state
     private var cancellables = Set<AnyCancellable>()
 
@@ -145,9 +148,15 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         let command = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
 
+        // Parse optional pid query parameter
+        let components = URLComponents(url: url, resolvingAgainstBaseURL: false)
+        let pidValue = components?.queryItems?.first(where: { $0.name == "pid" })
+            .flatMap { $0.value }
+            .flatMap { Int32($0) }
+
         switch command {
         case "start":
-            handleCameraStartCommand()
+            handleCameraStartCommand(pid: pidValue)
         case "stop":
             handleCameraStopCommand()
         default:
@@ -164,7 +173,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     /// Handle camera start command from URL scheme
-    private func handleCameraStartCommand() {
+    private func handleCameraStartCommand(pid: pid_t? = nil) {
         // Only start camera if: master toggle is ON and mode is hook-controlled
         guard settings.isEnabled,
               settings.cameraControlMode == .hookControlled else {
@@ -176,6 +185,22 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             cameraManager.start()
             updateStatusIconForHookState(active: true)
             print("Camera started via hook")
+        }
+
+        // Monitor Claude Code process for unexpected exit
+        processMonitor?.stop()
+        processMonitor = nil
+        if let pid = pid {
+            let monitor = ProcessMonitor(pid: pid)
+            monitor.onProcessTerminated = { [weak self] in
+                DispatchQueue.main.async {
+                    print("Claude Code process \(pid) terminated, stopping camera")
+                    self?.handleCameraStopCommand()
+                }
+            }
+            monitor.start()
+            processMonitor = monitor
+            print("Monitoring Claude Code process \(pid)")
         }
     }
 
@@ -189,6 +214,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
         // Always reset icon to standby (handles failed starts or rapid stop after start)
         updateStatusIconForHookState(active: false)
+
+        processMonitor?.stop()
+        processMonitor = nil
 
         if cameraManager.isRunning {
             cameraManager.stop()
@@ -363,6 +391,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Save floating window position before terminating
         floatingPreviewController?.saveWindowPosition()
         // Cleanup
+        processMonitor?.stop()
+        processMonitor = nil
         cameraManager.stop()
     }
 }
