@@ -100,3 +100,5 @@ ClaudeGesture supports automatic camera activation via Claude Code hooks. When e
 1. Run ClaudeGesture and grant camera permission (do this before relying on hooks)
 2. Enable master toggle and select "Hook-Controlled" mode
 3. Camera activates when Claude finishes responding, deactivates when you submit
+
+**Note:** Number gestures (1-5) automatically stop the camera after acting, since selecting an option doesn't trigger the `UserPromptSubmit` hook. Non-number gestures and manual mode are unaffected.
