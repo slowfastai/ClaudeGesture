@@ -185,6 +185,12 @@ class KeyboardSimulator: ObservableObject {
         print("fn key released (Wispr Flow stopped)")
     }
 
+    /// Release fn key only if currently held
+    func releaseFnKeyIfNeeded() {
+        guard isFnKeyHeld else { return }
+        releaseFnKey()
+    }
+
     /// Toggle fn key state (for thumbs up gesture)
     func toggleFnKey() {
         if isFnKeyHeld {

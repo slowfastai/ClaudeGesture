@@ -212,6 +212,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        keyboardSimulator.releaseFnKeyIfNeeded()
         // Always reset icon to standby (handles failed starts or rapid stop after start)
         updateStatusIconForHookState(active: false)
 
@@ -393,6 +394,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Cleanup
         processMonitor?.stop()
         processMonitor = nil
+        keyboardSimulator.releaseFnKeyIfNeeded()
         cameraManager.stop()
     }
 }
