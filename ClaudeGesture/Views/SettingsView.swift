@@ -50,6 +50,40 @@ struct SettingsView: View {
 
             Divider()
 
+            // Action Detection Toggle
+            Toggle(isOn: $settings.actionDetectionEnabled) {
+                Text("Action Detection")
+            }
+            .toggleStyle(.switch)
+
+            // Action Window
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Action Window")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack {
+                    Slider(value: $settings.actionWindowSeconds, in: 0.3...1.2, step: 0.1)
+                    Text("\(String(format: "%.1f", settings.actionWindowSeconds))s")
+                        .font(.caption)
+                        .frame(width: 40)
+                }
+            }
+
+            // Action Cooldown
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Action Cooldown")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                HStack {
+                    Slider(value: $settings.actionCooldown, in: 0.3...2.0, step: 0.1)
+                    Text("\(String(format: "%.1f", settings.actionCooldown))s")
+                        .font(.caption)
+                        .frame(width: 40)
+                }
+            }
+
+            Divider()
+
             // Reset Button
             HStack {
                 Spacer()

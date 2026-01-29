@@ -5,6 +5,7 @@ struct MenuBarView: View {
     @ObservedObject var settings = AppSettings.shared
     @ObservedObject var cameraManager: CameraManager
     @ObservedObject var gestureDetector: GestureDetector
+    @ObservedObject var actionDetector: ActionDetector
     @ObservedObject var keyboardSimulator: KeyboardSimulator
 
     @State private var showSettings = false
@@ -110,6 +111,17 @@ struct MenuBarView: View {
                             status: "\(gestureDetector.currentGesture.emoji) \(gestureDetector.currentGesture.rawValue)",
                             color: gestureDetector.currentGesture != .none ? .blue : .secondary
                         )
+
+                        if settings.actionDetectionEnabled {
+                            StatusRow(
+                                icon: "hand.raised",
+                                title: "Action",
+                                status: actionDetector.currentAction == .none
+                                    ? actionDetector.currentAction.displayName
+                                    : "\(actionDetector.currentAction.emoji) \(actionDetector.currentAction.displayName)",
+                                color: actionDetector.currentAction != .none ? .blue : .secondary
+                            )
+                        }
 
                         // Wispr Flow Status
                         if keyboardSimulator.isFnKeyHeld {
@@ -307,6 +319,7 @@ struct GestureReferenceView: View {
     MenuBarView(
         cameraManager: CameraManager(),
         gestureDetector: GestureDetector(),
+        actionDetector: ActionDetector(),
         keyboardSimulator: KeyboardSimulator()
     )
 }
