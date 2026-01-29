@@ -22,7 +22,7 @@ class GestureDetector: ObservableObject {
     private let frameSkipWhenStable = 2
     private let staleTimeout: TimeInterval = 0.4
     private var lastValidDetectionTime: Date?
-    private var trackingObservation: VNDetectedObjectObservation?
+    private var trackingObservations: [VNDetectedObjectObservation] = []
     private var lastFullDetectionFrame = 0
     private let fullDetectionInterval = 10
     private let trackingConfidenceThreshold: Float = 0.5
@@ -37,7 +37,7 @@ class GestureDetector: ObservableObject {
     var onGestureConfirmed: ((Gesture) -> Void)?
 
     init() {
-        handPoseRequest.maximumHandCount = 1
+        handPoseRequest.maximumHandCount = 2
     }
 
     /// Analyze a frame for hand gestures
@@ -68,21 +68,25 @@ class GestureDetector: ObservableObject {
             return
         }
 
-        var useFullDetection = shouldRefreshFullDetection || trackingObservation == nil
+        var useFullDetection = shouldRefreshFullDetection || trackingObservations.isEmpty
         var roi: CGRect?
 
-        if !useFullDetection, let trackingObservation = trackingObservation {
-            if let updatedObservation = performTracking(on: pixelBuffer, observation: trackingObservation) {
-                if updatedObservation.confidence >= trackingConfidenceThreshold {
-                    self.trackingObservation = updatedObservation
-                    roi = expandedRegion(for: updatedObservation.boundingBox)
-                } else {
-                    self.trackingObservation = nil
-                    useFullDetection = true
+        if !useFullDetection {
+            var updatedObservations: [VNDetectedObjectObservation] = []
+            for observation in trackingObservations {
+                if let updatedObservation = performTracking(on: pixelBuffer, observation: observation),
+                   updatedObservation.confidence >= trackingConfidenceThreshold {
+                    updatedObservations.append(updatedObservation)
                 }
-            } else {
-                self.trackingObservation = nil
+            }
+
+            if updatedObservations.isEmpty {
+                trackingObservations = []
                 useFullDetection = true
+            } else {
+                trackingObservations = updatedObservations
+                let boxes = updatedObservations.map { $0.boundingBox }
+                roi = unionRegion(for: boxes)
             }
         }
 
@@ -96,30 +100,61 @@ class GestureDetector: ObservableObject {
             try sequenceHandler.perform([handPoseRequest], on: pixelBuffer)
 
             guard let observations = handPoseRequest.results as? [VNHumanHandPoseObservation],
-                  let observation = observations.first else {
+                  !observations.isEmpty else {
                 handleNoObservation()
                 return
             }
 
-            let result = classifyGesture(from: observation)
-            guard result.isValid else {
+            var candidates: [(gesture: Gesture, confidence: Float)] = []
+            var validObservations: [VNHumanHandPoseObservation] = []
+
+            for observation in observations {
+                let result = classifyGesture(from: observation)
+                if result.isValid {
+                    validObservations.append(observation)
+                }
+                if result.isValid, result.gesture != .none {
+                    candidates.append((gesture: result.gesture, confidence: result.confidence))
+                }
+            }
+
+            guard !validObservations.isEmpty else {
                 handleNoObservation()
                 return
             }
 
             lastValidDetectionTime = now
-            if let boundingBox = handBoundingBox(from: observation) {
-                trackingObservation = VNDetectedObjectObservation(boundingBox: boundingBox)
-            } else {
-                trackingObservation = nil
+            trackingObservations = validObservations.compactMap { observation in
+                guard let boundingBox = handBoundingBox(from: observation) else { return nil }
+                return VNDetectedObjectObservation(boundingBox: boundingBox)
+            }
+            if trackingObservations.count > 2 {
+                trackingObservations = Array(trackingObservations.prefix(2))
             }
             if useFullDetection {
                 lastFullDetectionFrame = frameIndex
             }
 
-            updateStability(for: result.gesture, confidence: result.confidence)
+            let selectedGesture: Gesture
+            let selectedConfidence: Float
+
+            let fiveFingerCandidates = candidates.filter { $0.gesture == .fiveFingers }
+            if fiveFingerCandidates.count >= 2 {
+                selectedGesture = .doubleOpenHands
+                let first = fiveFingerCandidates[0].confidence
+                let second = fiveFingerCandidates[1].confidence
+                selectedConfidence = min(first, second)
+            } else if let bestCandidate = selectBestCandidate(from: candidates) {
+                selectedGesture = bestCandidate.gesture
+                selectedConfidence = bestCandidate.confidence
+            } else {
+                selectedGesture = .none
+                selectedConfidence = 0
+            }
+
+            updateStability(for: selectedGesture, confidence: selectedConfidence)
             DispatchQueue.main.async {
-                self.updateGesture(result.gesture, confidence: result.confidence)
+                self.updateGesture(selectedGesture, confidence: selectedConfidence)
             }
         } catch {
             print("Vision request failed: \(error)")
@@ -272,7 +307,7 @@ class GestureDetector: ObservableObject {
 
     private func shouldSkipFrame(forceFullDetection: Bool) -> Bool {
         guard !forceFullDetection else { return false }
-        guard trackingObservation != nil else { return false }
+        guard !trackingObservations.isEmpty else { return false }
         guard stableGestureFrames >= stableFrameThreshold else { return false }
         let skipInterval = frameSkipWhenStable + 1
         return frameIndex % skipInterval != 0
@@ -289,7 +324,7 @@ class GestureDetector: ObservableObject {
 
     private func handleNoObservation() {
         lastValidDetectionTime = nil
-        trackingObservation = nil
+        trackingObservations = []
         stableGesture = .none
         stableGestureFrames = 0
         lastFullDetectionFrame = 0
@@ -307,6 +342,19 @@ class GestureDetector: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    private func selectBestCandidate(from candidates: [(gesture: Gesture, confidence: Float)]) -> (gesture: Gesture, confidence: Float)? {
+        guard !candidates.isEmpty else { return nil }
+
+        if stableGesture != .none {
+            let stableCandidates = candidates.filter { $0.gesture == stableGesture }
+            if let bestStable = stableCandidates.max(by: { $0.confidence < $1.confidence }) {
+                return bestStable
+            }
+        }
+
+        return candidates.max(by: { $0.confidence < $1.confidence })
     }
 
     private func handBoundingBox(from observation: VNHumanHandPoseObservation) -> CGRect? {
@@ -335,6 +383,31 @@ class GestureDetector: ObservableObject {
         } catch {
             return nil
         }
+    }
+
+    private func unionRegion(for boxes: [CGRect]) -> CGRect {
+        guard let first = boxes.first else {
+            return CGRect(x: 0, y: 0, width: 1, height: 1)
+        }
+
+        var union = expandedRegion(for: first)
+        for box in boxes.dropFirst() {
+            union = union.union(expandedRegion(for: box))
+        }
+
+        return clampedRegion(union)
+    }
+
+    private func clampedRegion(_ rect: CGRect) -> CGRect {
+        var clamped = rect
+        clamped.origin.x = max(0, min(1, clamped.origin.x))
+        clamped.origin.y = max(0, min(1, clamped.origin.y))
+        clamped.size.width = min(1 - clamped.origin.x, clamped.size.width)
+        clamped.size.height = min(1 - clamped.origin.y, clamped.size.height)
+        if clamped.width <= 0 || clamped.height <= 0 {
+            return CGRect(x: 0, y: 0, width: 1, height: 1)
+        }
+        return clamped
     }
 
     private func expandedRegion(for boundingBox: CGRect) -> CGRect {
