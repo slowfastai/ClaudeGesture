@@ -214,5 +214,7 @@ extension KeyboardSimulator {
         static let space: UInt16 = 49
         static let returnKey: UInt16 = 36
         static let fnKey: UInt16 = 0x3F  // 63 decimal
+        static let pageUp: UInt16 = 116
+        static let pageDown: UInt16 = 121
     }
 }

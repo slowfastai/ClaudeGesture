@@ -1,12 +1,15 @@
 import Vision
 import Combine
 import Foundation
+import CoreGraphics
 
 /// Detects hand gestures from camera frames using Vision framework
 class GestureDetector: ObservableObject {
     @Published var currentGesture: Gesture = .none
     @Published var detectionConfidence: Float = 0.0
     @Published var isProcessing = false
+    @Published var indexTipPoint: CGPoint?
+    @Published var indexTipConfidence: Float = 0.0
 
     private let settings = AppSettings.shared
 
@@ -107,6 +110,9 @@ class GestureDetector: ObservableObject {
 
             var candidates: [(gesture: Gesture, confidence: Float)] = []
             var validObservations: [VNHumanHandPoseObservation] = []
+            var bestIndexTipPoint: CGPoint?
+            var bestIndexTipConfidence: Float = 0
+            let minConfidence = Float(settings.gestureSensitivity)
 
             for observation in observations {
                 let result = classifyGesture(from: observation)
@@ -115,6 +121,12 @@ class GestureDetector: ObservableObject {
                 }
                 if result.isValid, result.gesture != .none {
                     candidates.append((gesture: result.gesture, confidence: result.confidence))
+                }
+                if result.indexTipConfidence >= minConfidence,
+                   let point = result.indexTipPoint,
+                   result.indexTipConfidence > bestIndexTipConfidence {
+                    bestIndexTipPoint = point
+                    bestIndexTipConfidence = result.indexTipConfidence
                 }
             }
 
@@ -154,6 +166,8 @@ class GestureDetector: ObservableObject {
 
             updateStability(for: selectedGesture, confidence: selectedConfidence)
             DispatchQueue.main.async {
+                self.indexTipPoint = bestIndexTipPoint
+                self.indexTipConfidence = bestIndexTipConfidence
                 self.updateGesture(selectedGesture, confidence: selectedConfidence)
             }
         } catch {
@@ -163,7 +177,7 @@ class GestureDetector: ObservableObject {
     }
 
     /// Classify the gesture based on hand pose observation
-    private func classifyGesture(from observation: VNHumanHandPoseObservation) -> (gesture: Gesture, confidence: Float, isValid: Bool) {
+    private func classifyGesture(from observation: VNHumanHandPoseObservation) -> (gesture: Gesture, confidence: Float, isValid: Bool, indexTipPoint: CGPoint?, indexTipConfidence: Float) {
         do {
             // Get finger tip and pip (proximal interphalangeal) points
             let thumbTip = try observation.recognizedPoint(.thumbTip)
@@ -179,10 +193,12 @@ class GestureDetector: ObservableObject {
 
             // Check confidence threshold
             let minConfidence = Float(settings.gestureSensitivity)
+            let indexTipPoint = indexTip.confidence >= minConfidence ? indexTip.location : nil
+            let indexTipConfidence = indexTip.confidence
             guard thumbTip.confidence > minConfidence,
                   indexTip.confidence > minConfidence,
                   middleTip.confidence > minConfidence else {
-                return (.none, 0, false)
+                return (.none, 0, false, indexTipPoint, indexTipConfidence)
             }
 
             // Determine which fingers are extended
@@ -238,11 +254,11 @@ class GestureDetector: ObservableObject {
                 confidence = 0
             }
 
-            return (detectedGesture, confidence, true)
+            return (detectedGesture, confidence, true, indexTipPoint, indexTipConfidence)
 
         } catch {
             print("Failed to get hand points: \(error)")
-            return (.none, 0, false)
+            return (.none, 0, false, nil, 0)
         }
     }
 
@@ -330,6 +346,8 @@ class GestureDetector: ObservableObject {
         lastFullDetectionFrame = 0
         DispatchQueue.main.async {
             self.resetGesture()
+            self.indexTipPoint = nil
+            self.indexTipConfidence = 0
         }
     }
 

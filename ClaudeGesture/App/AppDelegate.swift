@@ -15,6 +15,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     // Floating preview window controller
     var floatingPreviewController: FloatingPreviewWindowController?
+    var floatingKeyboardController: FloatingKeyboardWindowController?
 
     // Track the previously active app for focus restoration
     private var previousActiveApp: NSRunningApplication?
@@ -43,6 +44,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         setupFocusTracking()
         setupCameraStateObserver()
         setupFloatingPreview()
+        setupFloatingKeyboard()
         checkPermissions()
     }
 
@@ -113,6 +115,32 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     self.floatingPreviewController?.show()
                 } else {
                     self.floatingPreviewController?.hide()
+                }
+            }
+        }
+        .store(in: &cancellables)
+    }
+
+    /// Setup floating virtual keyboard window and observe relevant state changes
+    private func setupFloatingKeyboard() {
+        floatingKeyboardController = FloatingKeyboardWindowController(
+            gestureDetector: gestureDetector,
+            keyboardSimulator: keyboardSimulator
+        )
+
+        Publishers.CombineLatest(
+            settings.$virtualKeyboardEnabled,
+            cameraManager.$isRunning
+        )
+        .receive(on: DispatchQueue.main)
+        .sink { [weak self] keyboardEnabled, cameraRunning in
+            DispatchQueue.main.async {
+                guard let self = self else { return }
+                let shouldShow = keyboardEnabled && cameraRunning
+                if shouldShow {
+                    self.floatingKeyboardController?.show()
+                } else {
+                    self.floatingKeyboardController?.hide()
                 }
             }
         }
@@ -305,6 +333,9 @@ class AppDelegate: NSObject, NSApplicationDelegate {
 
     /// Handle a confirmed gesture
     private func handleGesture(_ gesture: Gesture) {
+        if settings.virtualKeyboardEnabled {
+            return
+        }
         print("Gesture confirmed: \(gesture.rawValue)")
 
         // Update menubar icon briefly to show feedback
@@ -391,6 +422,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         floatingPreviewController?.isAppTerminating = true
         // Save floating window position before terminating
         floatingPreviewController?.saveWindowPosition()
+        floatingKeyboardController?.isAppTerminating = true
+        floatingKeyboardController?.saveWindowPosition()
         // Cleanup
         processMonitor?.stop()
         processMonitor = nil

@@ -20,6 +20,8 @@
 		A1000011001 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000 /* Settings.swift */; };
 		A1000012001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000012000 /* Assets.xcassets */; };
 		A1000015001 /* FloatingPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000015000 /* FloatingPreviewWindow.swift */; };
+		A1000017001 /* FloatingKeyboardWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000017000 /* FloatingKeyboardWindow.swift */; };
+		A1000018001 /* VirtualKey.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018000 /* VirtualKey.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +41,8 @@
 		A1000013000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000014000 /* ClaudeGesture.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = ClaudeGesture.entitlements; sourceTree = "<group>"; };
 		A1000015000 /* FloatingPreviewWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPreviewWindow.swift; sourceTree = "<group>"; };
+		A1000017000 /* FloatingKeyboardWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingKeyboardWindow.swift; sourceTree = "<group>"; };
+		A1000018000 /* VirtualKey.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtualKey.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -98,6 +102,7 @@
 				A1000004000 /* SettingsView.swift */,
 				A1000005000 /* CameraPreviewView.swift */,
 				A1000015000 /* FloatingPreviewWindow.swift */,
+				A1000017000 /* FloatingKeyboardWindow.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -118,6 +123,7 @@
 			children = (
 				A1000010000 /* Gesture.swift */,
 				A1000011000 /* Settings.swift */,
+				A1000018000 /* VirtualKey.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -211,6 +217,8 @@
 				A1000010001 /* Gesture.swift in Sources */,
 				A1000011001 /* Settings.swift in Sources */,
 				A1000015001 /* FloatingPreviewWindow.swift in Sources */,
+				A1000017001 /* FloatingKeyboardWindow.swift in Sources */,
+				A1000018001 /* VirtualKey.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
