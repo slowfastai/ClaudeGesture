@@ -125,11 +125,19 @@ struct FloatingKeyboardContentView: View {
     @State private var smoothedPoint: CGPoint?
     @State private var pressedKeyID: String?
     @State private var viewSize: CGSize = .zero
+    @State private var lastValidPointTime: Date?
 
     private let horizontalPadding: CGFloat = 12
     private let verticalPadding: CGFloat = 12
     private let rowSpacing: CGFloat = 8
     private let keySpacing: CGFloat = 8
+    private let cursorDeadZone: CGFloat = 2
+    private let cursorMaxStep: CGFloat = 24
+    private let cursorMinAlpha: CGFloat = 0.15
+    private let cursorMaxAlpha: CGFloat = 0.6
+    private let cursorSpeedForMaxAlpha: CGFloat = 50
+    private let cursorConfidenceThreshold: Float = 0.2
+    private let cursorGraceInterval: TimeInterval = 0.2
 
     var body: some View {
         GeometryReader { geometry in
@@ -233,11 +241,15 @@ struct FloatingKeyboardContentView: View {
 
     private func handlePointChange(_ normalizedPoint: CGPoint?) {
         guard viewSize.width > 0, viewSize.height > 0 else { return }
-        let minConfidence = Float(settings.gestureSensitivity)
-        guard let normalizedPoint, gestureDetector.indexTipConfidence >= minConfidence else {
+        guard let normalizedPoint, gestureDetector.indexTipConfidence >= cursorConfidenceThreshold else {
+            if let lastTime = lastValidPointTime,
+               Date().timeIntervalSince(lastTime) < cursorGraceInterval {
+                return
+            }
             clearTracking()
             return
         }
+        lastValidPointTime = Date()
 
         let mapped = mapPoint(normalizedPoint, in: viewSize)
         let clamped = CGPoint(
@@ -246,10 +258,25 @@ struct FloatingKeyboardContentView: View {
         )
 
         if let previous = smoothedPoint {
-            smoothedPoint = CGPoint(
-                x: previous.x + (clamped.x - previous.x) * 0.25,
-                y: previous.y + (clamped.y - previous.y) * 0.25
-            )
+            let deltaX = clamped.x - previous.x
+            let deltaY = clamped.y - previous.y
+            let distance = sqrt(deltaX * deltaX + deltaY * deltaY)
+
+            if distance < cursorDeadZone {
+                smoothedPoint = previous
+            } else {
+                let normalizedSpeed = min(distance / cursorSpeedForMaxAlpha, 1)
+                let alpha = cursorMinAlpha + (cursorMaxAlpha - cursorMinAlpha) * normalizedSpeed
+
+                let step = min(distance, cursorMaxStep)
+                let scale = step / distance
+                let limited = CGPoint(x: previous.x + deltaX * scale, y: previous.y + deltaY * scale)
+
+                smoothedPoint = CGPoint(
+                    x: previous.x + (limited.x - previous.x) * alpha,
+                    y: previous.y + (limited.y - previous.y) * alpha
+                )
+            }
         } else {
             smoothedPoint = clamped
         }
@@ -286,6 +313,7 @@ struct FloatingKeyboardContentView: View {
         hoverStartTime = nil
         didTriggerCurrentKey = false
         smoothedPoint = nil
+        lastValidPointTime = nil
     }
 
     private func triggerKey(_ key: VirtualKey) {
