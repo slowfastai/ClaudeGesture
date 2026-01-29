@@ -1,12 +1,15 @@
 import Vision
 import Combine
 import Foundation
+import CoreGraphics
 
 /// Detects hand gestures from camera frames using Vision framework
 class GestureDetector: ObservableObject {
     @Published var currentGesture: Gesture = .none
     @Published var detectionConfidence: Float = 0.0
     @Published var isProcessing = false
+    @Published var indexTipPoint: CGPoint?
+    @Published var indexTipConfidence: Float = 0.0
 
     private let settings = AppSettings.shared
 
@@ -27,6 +30,7 @@ class GestureDetector: ObservableObject {
     private let fullDetectionInterval = 10
     private let trackingConfidenceThreshold: Float = 0.5
     private let roiPaddingRatio: CGFloat = 0.15
+    private let cursorMinConfidence: Float = 0.2
 
     // Debouncing
     private var lastGesture: Gesture = .none
@@ -107,6 +111,8 @@ class GestureDetector: ObservableObject {
 
             var candidates: [(gesture: Gesture, confidence: Float)] = []
             var validObservations: [VNHumanHandPoseObservation] = []
+            var bestIndexTipPoint: CGPoint?
+            var bestIndexTipConfidence: Float = 0
 
             for observation in observations {
                 let result = classifyGesture(from: observation)
@@ -115,6 +121,11 @@ class GestureDetector: ObservableObject {
                 }
                 if result.isValid, result.gesture != .none {
                     candidates.append((gesture: result.gesture, confidence: result.confidence))
+                }
+                if let point = result.indexTipPoint,
+                   result.indexTipConfidence > bestIndexTipConfidence {
+                    bestIndexTipPoint = point
+                    bestIndexTipConfidence = result.indexTipConfidence
                 }
             }
 
@@ -154,6 +165,8 @@ class GestureDetector: ObservableObject {
 
             updateStability(for: selectedGesture, confidence: selectedConfidence)
             DispatchQueue.main.async {
+                self.indexTipPoint = bestIndexTipPoint
+                self.indexTipConfidence = bestIndexTipConfidence
                 self.updateGesture(selectedGesture, confidence: selectedConfidence)
             }
         } catch {
@@ -163,7 +176,7 @@ class GestureDetector: ObservableObject {
     }
 
     /// Classify the gesture based on hand pose observation
-    private func classifyGesture(from observation: VNHumanHandPoseObservation) -> (gesture: Gesture, confidence: Float, isValid: Bool) {
+    private func classifyGesture(from observation: VNHumanHandPoseObservation) -> (gesture: Gesture, confidence: Float, isValid: Bool, indexTipPoint: CGPoint?, indexTipConfidence: Float) {
         do {
             // Get finger tip and pip (proximal interphalangeal) points
             let thumbTip = try observation.recognizedPoint(.thumbTip)
@@ -179,19 +192,24 @@ class GestureDetector: ObservableObject {
 
             // Check confidence threshold
             let minConfidence = Float(settings.gestureSensitivity)
-            guard thumbTip.confidence > minConfidence,
-                  indexTip.confidence > minConfidence,
-                  middleTip.confidence > minConfidence else {
-                return (.none, 0, false)
+            let indexTipPoint = indexTip.confidence >= cursorMinConfidence ? indexTip.location : nil
+            let indexTipConfidence = indexTip.confidence
+            guard indexTip.confidence > minConfidence,
+                  indexPIP.confidence > minConfidence else {
+                return (.none, 0, false, indexTipPoint, indexTipConfidence)
             }
 
             // Determine which fingers are extended
-            let thumbExtended = thumbTip.y > thumbIP.y + 0.05
-            let thumbDown = thumbTip.y < thumbIP.y - 0.05
-            let indexExtended = indexTip.y > indexPIP.y + 0.03
-            let middleExtended = middleTip.y > middlePIP.y + 0.03
-            let ringExtended = ringTip.y > ringPIP.y + 0.03
-            let littleExtended = littleTip.y > littlePIP.y + 0.03
+            let thumbExtended = isExtended(tip: thumbTip, joint: thumbIP, threshold: 0.05, minConfidence: minConfidence)
+            let thumbDown = isExtendedDown(tip: thumbTip, joint: thumbIP, threshold: 0.05, minConfidence: minConfidence)
+            let indexExtended = isExtended(tip: indexTip, joint: indexPIP, threshold: 0.03, minConfidence: minConfidence)
+            let middleExtended = isExtended(tip: middleTip, joint: middlePIP, threshold: 0.03, minConfidence: minConfidence)
+            let ringExtended = isExtended(tip: ringTip, joint: ringPIP, threshold: 0.03, minConfidence: minConfidence)
+            let littleExtended = isExtended(tip: littleTip, joint: littlePIP, threshold: 0.03, minConfidence: minConfidence)
+            let hasFullFingerConfidence = indexTip.confidence >= minConfidence &&
+                middleTip.confidence >= minConfidence &&
+                ringTip.confidence >= minConfidence &&
+                littleTip.confidence >= minConfidence
 
             // Classify gesture
             let detectedGesture: Gesture
@@ -217,7 +235,7 @@ class GestureDetector: ObservableObject {
                 // Four fingers: all four fingers extended (excluding thumb)
                 detectedGesture = .fourFingers
                 confidence = (indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 4
-            } else if !indexExtended && !middleExtended && !ringExtended && !littleExtended {
+            } else if hasFullFingerConfidence && !indexExtended && !middleExtended && !ringExtended && !littleExtended {
                 // Closed fist: no fingers extended (triggers Shift+Tab)
                 detectedGesture = .closedFist
                 confidence = 0.8
@@ -238,12 +256,22 @@ class GestureDetector: ObservableObject {
                 confidence = 0
             }
 
-            return (detectedGesture, confidence, true)
+            return (detectedGesture, confidence, true, indexTipPoint, indexTipConfidence)
 
         } catch {
             print("Failed to get hand points: \(error)")
-            return (.none, 0, false)
+            return (.none, 0, false, nil, 0)
         }
+    }
+
+    private func isExtended(tip: VNRecognizedPoint, joint: VNRecognizedPoint, threshold: CGFloat, minConfidence: Float) -> Bool {
+        guard tip.confidence >= minConfidence, joint.confidence >= minConfidence else { return false }
+        return tip.y > joint.y + threshold
+    }
+
+    private func isExtendedDown(tip: VNRecognizedPoint, joint: VNRecognizedPoint, threshold: CGFloat, minConfidence: Float) -> Bool {
+        guard tip.confidence >= minConfidence, joint.confidence >= minConfidence else { return false }
+        return tip.y < joint.y - threshold
     }
 
     /// Update the current gesture with debouncing logic
@@ -330,6 +358,8 @@ class GestureDetector: ObservableObject {
         lastFullDetectionFrame = 0
         DispatchQueue.main.async {
             self.resetGesture()
+            self.indexTipPoint = nil
+            self.indexTipConfidence = 0
         }
     }
 

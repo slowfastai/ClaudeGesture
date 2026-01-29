@@ -50,6 +50,8 @@ class AppSettings: ObservableObject {
         static let gestureCooldown = "gestureCooldown"
         static let cameraControlMode = "cameraControlMode"
         static let cameraPreviewMode = "cameraPreviewMode"
+        static let virtualKeyboardEnabled = "virtualKeyboardEnabled"
+        static let virtualKeyboardDwellDuration = "virtualKeyboardDwellDuration"
         // Legacy keys (for migration)
         static let showCameraPreview = "showCameraPreview"
         static let floatingPreviewEnabled = "floatingPreviewEnabled"
@@ -97,12 +99,28 @@ class AppSettings: ObservableObject {
         }
     }
 
+    /// Whether virtual keyboard is enabled
+    @Published var virtualKeyboardEnabled: Bool {
+        didSet {
+            defaults.set(virtualKeyboardEnabled, forKey: Keys.virtualKeyboardEnabled)
+        }
+    }
+
+    /// How long the finger must dwell before triggering a virtual key (seconds)
+    @Published var virtualKeyboardDwellDuration: Double {
+        didSet {
+            defaults.set(virtualKeyboardDwellDuration, forKey: Keys.virtualKeyboardDwellDuration)
+        }
+    }
+
     private init() {
         // Load saved values or use defaults
         self.isEnabled = defaults.object(forKey: Keys.isEnabled) as? Bool ?? false
         self.gestureSensitivity = defaults.object(forKey: Keys.gestureSensitivity) as? Double ?? 0.7
         self.gestureHoldDuration = defaults.object(forKey: Keys.gestureHoldDuration) as? Double ?? 0.3
         self.gestureCooldown = defaults.object(forKey: Keys.gestureCooldown) as? Double ?? 0.5
+        self.virtualKeyboardEnabled = defaults.object(forKey: Keys.virtualKeyboardEnabled) as? Bool ?? false
+        self.virtualKeyboardDwellDuration = defaults.object(forKey: Keys.virtualKeyboardDwellDuration) as? Double ?? 0.7
         if let modeString = defaults.string(forKey: Keys.cameraControlMode),
            let mode = CameraControlMode(rawValue: modeString) {
             self.cameraControlMode = mode
@@ -148,6 +166,8 @@ class AppSettings: ObservableObject {
         gestureSensitivity = 0.7
         gestureHoldDuration = 0.3
         gestureCooldown = 0.5
+        virtualKeyboardEnabled = false
+        virtualKeyboardDwellDuration = 0.7
         cameraControlMode = .hookControlled
         cameraPreviewMode = .off
     }

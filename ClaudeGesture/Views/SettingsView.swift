@@ -50,6 +50,30 @@ struct SettingsView: View {
 
             Divider()
 
+            // Virtual Keyboard
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Virtual Keyboard")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                Toggle("Enable Virtual Keyboard", isOn: $settings.virtualKeyboardEnabled)
+                    .toggleStyle(.switch)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Dwell Duration")
+                        .font(.caption)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Slider(value: $settings.virtualKeyboardDwellDuration, in: 0.2...1.5, step: 0.1)
+                        Text("\(String(format: "%.1f", settings.virtualKeyboardDwellDuration))s")
+                            .font(.caption)
+                            .frame(width: 40)
+                    }
+                }
+            }
+
+            Divider()
+
             // Reset Button
             HStack {
                 Spacer()
