@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Carbon.HIToolbox
 import ApplicationServices
@@ -57,6 +58,19 @@ class KeyboardSimulator: ObservableObject {
         lastKeyPressed = gesture.actionDescription
     }
 
+    /// Simulate an action detected from dynamic hand motion
+    func simulateAction(_ action: HandAction) {
+        switch action {
+        case .swipeLeft:
+            simulateKeyPress(keyCode: KeyCodes.leftArrow)
+        case .swipeRight:
+            simulateKeyPress(keyCode: KeyCodes.rightArrow)
+        case .pinch:
+            simulateLeftClick()
+        }
+        lastKeyPressed = action.actionDescription
+    }
+
     /// Simulate pressing a key with modifier keys (e.g., Shift+Tab)
     func simulateKeyWithModifiers(keyCode: UInt16, modifiers: CGEventFlags) {
         guard accessibilityGranted else {
@@ -109,6 +123,27 @@ class KeyboardSimulator: ObservableObject {
         keyUp.post(tap: .cghidEventTap)
 
         print("Simulated key press: \(keyCode)")
+    }
+
+    private func simulateLeftClick() {
+        guard accessibilityGranted else {
+            print("Accessibility permissions not granted")
+            requestAccessibilityPermissions()
+            return
+        }
+
+        let source = CGEventSource(stateID: .hidSystemState)
+        let mouseLocation = NSEvent.mouseLocation
+        let point = CGPoint(x: mouseLocation.x, y: mouseLocation.y)
+
+        guard let mouseDown = CGEvent(mouseEventSource: source, mouseType: .leftMouseDown, mouseCursorPosition: point, mouseButton: .left),
+              let mouseUp = CGEvent(mouseEventSource: source, mouseType: .leftMouseUp, mouseCursorPosition: point, mouseButton: .left) else {
+            print("Failed to create mouse click events")
+            return
+        }
+
+        mouseDown.post(tap: .cghidEventTap)
+        mouseUp.post(tap: .cghidEventTap)
     }
 
     /// Type a string of text
@@ -213,6 +248,8 @@ extension KeyboardSimulator {
         static let escape: UInt16 = 53
         static let space: UInt16 = 49
         static let returnKey: UInt16 = 36
+        static let leftArrow: UInt16 = 123
+        static let rightArrow: UInt16 = 124
         static let fnKey: UInt16 = 0x3F  // 63 decimal
     }
 }

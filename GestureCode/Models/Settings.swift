@@ -50,6 +50,13 @@ class AppSettings: ObservableObject {
         static let gestureCooldown = "gestureCooldown"
         static let cameraControlMode = "cameraControlMode"
         static let cameraPreviewMode = "cameraPreviewMode"
+        static let detectionBackend = "detectionBackend"
+        static let swipeDistanceThreshold = "swipeDistanceThreshold"
+        static let swipeVerticalTolerance = "swipeVerticalTolerance"
+        static let swipeTimeWindow = "swipeTimeWindow"
+        static let pinchThreshold = "pinchThreshold"
+        static let pinchReleaseThreshold = "pinchReleaseThreshold"
+        static let actionCooldown = "actionCooldown"
         // Legacy keys (for migration)
         static let showCameraPreview = "showCameraPreview"
         static let floatingPreviewEnabled = "floatingPreviewEnabled"
@@ -97,12 +104,73 @@ class AppSettings: ObservableObject {
         }
     }
 
+    /// Gesture detection backend
+    @Published var detectionBackend: DetectionBackend {
+        didSet {
+            defaults.set(detectionBackend.rawValue, forKey: Keys.detectionBackend)
+        }
+    }
+
+    /// Swipe distance threshold (normalized)
+    @Published var swipeDistanceThreshold: Double {
+        didSet {
+            defaults.set(swipeDistanceThreshold, forKey: Keys.swipeDistanceThreshold)
+        }
+    }
+
+    /// Maximum allowed vertical drift during swipe
+    @Published var swipeVerticalTolerance: Double {
+        didSet {
+            defaults.set(swipeVerticalTolerance, forKey: Keys.swipeVerticalTolerance)
+        }
+    }
+
+    /// Swipe time window (seconds)
+    @Published var swipeTimeWindow: Double {
+        didSet {
+            defaults.set(swipeTimeWindow, forKey: Keys.swipeTimeWindow)
+        }
+    }
+
+    /// Pinch detection distance threshold (normalized)
+    @Published var pinchThreshold: Double {
+        didSet {
+            defaults.set(pinchThreshold, forKey: Keys.pinchThreshold)
+        }
+    }
+
+    /// Pinch release distance threshold (normalized)
+    @Published var pinchReleaseThreshold: Double {
+        didSet {
+            defaults.set(pinchReleaseThreshold, forKey: Keys.pinchReleaseThreshold)
+        }
+    }
+
+    /// Cooldown between action triggers (seconds)
+    @Published var actionCooldown: Double {
+        didSet {
+            defaults.set(actionCooldown, forKey: Keys.actionCooldown)
+        }
+    }
+
     private init() {
         // Load saved values or use defaults
         self.isEnabled = defaults.object(forKey: Keys.isEnabled) as? Bool ?? false
         self.gestureSensitivity = defaults.object(forKey: Keys.gestureSensitivity) as? Double ?? 0.7
         self.gestureHoldDuration = defaults.object(forKey: Keys.gestureHoldDuration) as? Double ?? 0.3
         self.gestureCooldown = defaults.object(forKey: Keys.gestureCooldown) as? Double ?? 0.5
+        if let backendString = defaults.string(forKey: Keys.detectionBackend),
+           let backend = DetectionBackend(rawValue: backendString) {
+            self.detectionBackend = backend
+        } else {
+            self.detectionBackend = .vision
+        }
+        self.swipeDistanceThreshold = defaults.object(forKey: Keys.swipeDistanceThreshold) as? Double ?? 0.22
+        self.swipeVerticalTolerance = defaults.object(forKey: Keys.swipeVerticalTolerance) as? Double ?? 0.10
+        self.swipeTimeWindow = defaults.object(forKey: Keys.swipeTimeWindow) as? Double ?? 0.25
+        self.pinchThreshold = defaults.object(forKey: Keys.pinchThreshold) as? Double ?? 0.06
+        self.pinchReleaseThreshold = defaults.object(forKey: Keys.pinchReleaseThreshold) as? Double ?? 0.09
+        self.actionCooldown = defaults.object(forKey: Keys.actionCooldown) as? Double ?? 0.4
         if let modeString = defaults.string(forKey: Keys.cameraControlMode),
            let mode = CameraControlMode(rawValue: modeString) {
             self.cameraControlMode = mode
@@ -150,5 +218,12 @@ class AppSettings: ObservableObject {
         gestureCooldown = 0.5
         cameraControlMode = .hookControlled
         cameraPreviewMode = .off
+        detectionBackend = .vision
+        swipeDistanceThreshold = 0.22
+        swipeVerticalTolerance = 0.10
+        swipeTimeWindow = 0.25
+        pinchThreshold = 0.06
+        pinchReleaseThreshold = 0.09
+        actionCooldown = 0.4
     }
 }

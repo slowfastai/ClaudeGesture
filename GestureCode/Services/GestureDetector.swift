@@ -1,8 +1,9 @@
-import Vision
 import Combine
+import CoreGraphics
+import CoreVideo
 import Foundation
 
-/// Detects hand gestures from camera frames using Vision framework
+/// Detects hand gestures from camera frames using the selected backend
 class GestureDetector: ObservableObject {
     @Published var currentGesture: Gesture = .none
     @Published var detectionConfidence: Float = 0.0
@@ -12,8 +13,8 @@ class GestureDetector: ObservableObject {
 
     private let visionQueue = DispatchQueue(label: "com.gesturecode.vision")
     private let processingSemaphore = DispatchSemaphore(value: 1)
-    private let sequenceHandler = VNSequenceRequestHandler()
-    private let handPoseRequest = VNDetectHumanHandPoseRequest()
+    private var backend: HandLandmarkBackend
+    private let actionDetector: HandActionDetector
 
     private var frameIndex = 0
     private var stableGesture: Gesture = .none
@@ -22,11 +23,7 @@ class GestureDetector: ObservableObject {
     private let frameSkipWhenStable = 2
     private let staleTimeout: TimeInterval = 0.4
     private var lastValidDetectionTime: Date?
-    private var trackingObservations: [VNDetectedObjectObservation] = []
-    private var lastFullDetectionFrame = 0
-    private let fullDetectionInterval = 10
-    private let trackingConfidenceThreshold: Float = 0.5
-    private let roiPaddingRatio: CGFloat = 0.15
+    private var cancellables = Set<AnyCancellable>()
 
     // Debouncing
     private var lastGesture: Gesture = .none
@@ -35,9 +32,12 @@ class GestureDetector: ObservableObject {
 
     /// Callback when a gesture is confirmed (held for required duration)
     var onGestureConfirmed: ((Gesture) -> Void)?
+    var onActionDetected: ((HandAction) -> Void)?
 
     init() {
-        handPoseRequest.maximumHandCount = 2
+        backend = GestureDetector.makeBackend(settings.detectionBackend)
+        actionDetector = HandActionDetector(settings: settings)
+        observeSettings()
     }
 
     /// Analyze a frame for hand gestures
@@ -63,187 +63,142 @@ class GestureDetector: ObservableObject {
             return
         }
 
-        let shouldRefreshFullDetection = frameIndex - lastFullDetectionFrame >= fullDetectionInterval
-        if shouldSkipFrame(forceFullDetection: shouldRefreshFullDetection) {
+        if shouldSkipFrame() {
             return
         }
 
-        var useFullDetection = shouldRefreshFullDetection || trackingObservations.isEmpty
-        var roi: CGRect?
-
-        if !useFullDetection {
-            var updatedObservations: [VNDetectedObjectObservation] = []
-            for observation in trackingObservations {
-                if let updatedObservation = performTracking(on: pixelBuffer, observation: observation),
-                   updatedObservation.confidence >= trackingConfidenceThreshold {
-                    updatedObservations.append(updatedObservation)
-                }
-            }
-
-            if updatedObservations.isEmpty {
-                trackingObservations = []
-                useFullDetection = true
-            } else {
-                trackingObservations = updatedObservations
-                let boxes = updatedObservations.map { $0.boundingBox }
-                roi = unionRegion(for: boxes)
-            }
-        }
-
-        if useFullDetection {
-            handPoseRequest.regionOfInterest = CGRect(x: 0, y: 0, width: 1, height: 1)
-        } else if let roi = roi {
-            handPoseRequest.regionOfInterest = roi
-        }
-
         do {
-            try sequenceHandler.perform([handPoseRequest], on: pixelBuffer)
-
-            guard let observations = handPoseRequest.results as? [VNHumanHandPoseObservation],
-                  !observations.isEmpty else {
+            let observations = try backend.detectHands(in: pixelBuffer)
+            guard !observations.isEmpty else {
                 handleNoObservation()
                 return
             }
 
+            lastValidDetectionTime = now
+
             var candidates: [(gesture: Gesture, confidence: Float)] = []
-            var validObservations: [VNHumanHandPoseObservation] = []
+            var gestureObservations: [HandObservation] = []
 
             for observation in observations {
                 let result = classifyGesture(from: observation)
                 if result.isValid {
-                    validObservations.append(observation)
+                    gestureObservations.append(observation)
                 }
                 if result.isValid, result.gesture != .none {
                     candidates.append((gesture: result.gesture, confidence: result.confidence))
                 }
             }
 
-            guard !validObservations.isEmpty else {
-                handleNoObservation()
-                return
-            }
-
-            lastValidDetectionTime = now
-            trackingObservations = validObservations.compactMap { observation in
-                guard let boundingBox = handBoundingBox(from: observation) else { return nil }
-                return VNDetectedObjectObservation(boundingBox: boundingBox)
-            }
-            if trackingObservations.count > 2 {
-                trackingObservations = Array(trackingObservations.prefix(2))
-            }
-            if useFullDetection {
-                lastFullDetectionFrame = frameIndex
-            }
-
-            let selectedGesture: Gesture
-            let selectedConfidence: Float
-
-            let fiveFingerCandidates = candidates.filter { $0.gesture == .fiveFingers }
-            if fiveFingerCandidates.count >= 2 {
-                selectedGesture = .doubleOpenHands
-                let first = fiveFingerCandidates[0].confidence
-                let second = fiveFingerCandidates[1].confidence
-                selectedConfidence = min(first, second)
-            } else if let bestCandidate = selectBestCandidate(from: candidates) {
-                selectedGesture = bestCandidate.gesture
-                selectedConfidence = bestCandidate.confidence
+            if gestureObservations.isEmpty {
+                stableGesture = .none
+                stableGestureFrames = 0
+                DispatchQueue.main.async {
+                    self.resetGesture()
+                }
             } else {
-                selectedGesture = .none
-                selectedConfidence = 0
+                let selectedGesture: Gesture
+                let selectedConfidence: Float
+
+                let fiveFingerCandidates = candidates.filter { $0.gesture == .fiveFingers }
+                if fiveFingerCandidates.count >= 2 {
+                    selectedGesture = .doubleOpenHands
+                    let first = fiveFingerCandidates[0].confidence
+                    let second = fiveFingerCandidates[1].confidence
+                    selectedConfidence = min(first, second)
+                } else if let bestCandidate = selectBestCandidate(from: candidates) {
+                    selectedGesture = bestCandidate.gesture
+                    selectedConfidence = bestCandidate.confidence
+                } else {
+                    selectedGesture = .none
+                    selectedConfidence = 0
+                }
+
+                updateStability(for: selectedGesture, confidence: selectedConfidence)
+                DispatchQueue.main.async {
+                    self.updateGesture(selectedGesture, confidence: selectedConfidence)
+                }
             }
 
-            updateStability(for: selectedGesture, confidence: selectedConfidence)
-            DispatchQueue.main.async {
-                self.updateGesture(selectedGesture, confidence: selectedConfidence)
+            let actionObservations = observations.filter {
+                ($0.joints[.wrist]?.confidence ?? 0) >= Float(settings.gestureSensitivity)
+            }
+            if let primaryHand = selectPrimaryHand(from: actionObservations),
+               let action = actionDetector.detectAction(from: primaryHand, at: now) {
+                DispatchQueue.main.async {
+                    self.onActionDetected?(action)
+                }
             }
         } catch {
-            print("Vision request failed: \(error)")
+            print("Hand detection failed: \(error)")
             handleNoObservation()
         }
     }
 
     /// Classify the gesture based on hand pose observation
-    private func classifyGesture(from observation: VNHumanHandPoseObservation) -> (gesture: Gesture, confidence: Float, isValid: Bool) {
-        do {
-            // Get finger tip and pip (proximal interphalangeal) points
-            let thumbTip = try observation.recognizedPoint(.thumbTip)
-            let thumbIP = try observation.recognizedPoint(.thumbIP)
-            let indexTip = try observation.recognizedPoint(.indexTip)
-            let indexPIP = try observation.recognizedPoint(.indexPIP)
-            let middleTip = try observation.recognizedPoint(.middleTip)
-            let middlePIP = try observation.recognizedPoint(.middlePIP)
-            let ringTip = try observation.recognizedPoint(.ringTip)
-            let ringPIP = try observation.recognizedPoint(.ringPIP)
-            let littleTip = try observation.recognizedPoint(.littleTip)
-            let littlePIP = try observation.recognizedPoint(.littlePIP)
-
-            // Check confidence threshold
-            let minConfidence = Float(settings.gestureSensitivity)
-            guard thumbTip.confidence > minConfidence,
-                  indexTip.confidence > minConfidence,
-                  middleTip.confidence > minConfidence else {
-                return (.none, 0, false)
-            }
-
-            // Determine which fingers are extended
-            let thumbExtended = thumbTip.y > thumbIP.y + 0.05
-            let thumbDown = thumbTip.y < thumbIP.y - 0.05
-            let indexExtended = indexTip.y > indexPIP.y + 0.03
-            let middleExtended = middleTip.y > middlePIP.y + 0.03
-            let ringExtended = ringTip.y > ringPIP.y + 0.03
-            let littleExtended = littleTip.y > littlePIP.y + 0.03
-
-            // Classify gesture
-            let detectedGesture: Gesture
-            let confidence: Float
-
-            if thumbExtended && !indexExtended && !middleExtended && !ringExtended && !littleExtended {
-                // Thumbs up: only thumb extended upward
-                detectedGesture = .thumbsUp
-                confidence = thumbTip.confidence
-            } else if thumbDown && !indexExtended && !middleExtended && !ringExtended && !littleExtended {
-                // Thumbs down: only thumb extended downward
-                detectedGesture = .thumbsDown
-                confidence = thumbTip.confidence
-            } else if !thumbExtended && !thumbDown && !indexExtended && !middleExtended && !ringExtended && littleExtended {
-                // Pinky up: only little finger extended (thumb must be tucked)
-                detectedGesture = .pinkyUp
-                confidence = littleTip.confidence
-            } else if thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
-                // Five fingers: all fingers extended including thumb
-                detectedGesture = .fiveFingers
-                confidence = (thumbTip.confidence + indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 5
-            } else if !thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
-                // Four fingers: all four fingers extended (excluding thumb)
-                detectedGesture = .fourFingers
-                confidence = (indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 4
-            } else if !indexExtended && !middleExtended && !ringExtended && !littleExtended {
-                // Closed fist: no fingers extended (triggers Shift+Tab)
-                detectedGesture = .closedFist
-                confidence = 0.8
-            } else if indexExtended && !middleExtended && !ringExtended && !littleExtended {
-                // One finger up: only index extended
-                detectedGesture = .oneFingerUp
-                confidence = indexTip.confidence
-            } else if indexExtended && middleExtended && !ringExtended && !littleExtended {
-                // Peace sign: index and middle extended
-                detectedGesture = .peaceSign
-                confidence = (indexTip.confidence + middleTip.confidence) / 2
-            } else if indexExtended && middleExtended && ringExtended && !littleExtended {
-                // Three fingers: index, middle, and ring extended
-                detectedGesture = .threeFingers
-                confidence = (indexTip.confidence + middleTip.confidence + ringTip.confidence) / 3
-            } else {
-                detectedGesture = .none
-                confidence = 0
-            }
-
-            return (detectedGesture, confidence, true)
-
-        } catch {
-            print("Failed to get hand points: \(error)")
+    private func classifyGesture(from observation: HandObservation) -> (gesture: Gesture, confidence: Float, isValid: Bool) {
+        guard let thumbTip = observation.joints[.thumbTip],
+              let thumbIP = observation.joints[.thumbIP],
+              let indexTip = observation.joints[.indexTip],
+              let indexPIP = observation.joints[.indexPIP],
+              let middleTip = observation.joints[.middleTip],
+              let middlePIP = observation.joints[.middlePIP],
+              let ringTip = observation.joints[.ringTip],
+              let ringPIP = observation.joints[.ringPIP],
+              let littleTip = observation.joints[.littleTip],
+              let littlePIP = observation.joints[.littlePIP] else {
             return (.none, 0, false)
         }
+
+        let minConfidence = Float(settings.gestureSensitivity)
+        guard thumbTip.confidence > minConfidence,
+              indexTip.confidence > minConfidence,
+              middleTip.confidence > minConfidence else {
+            return (.none, 0, false)
+        }
+
+        let thumbExtended = thumbTip.location.y > thumbIP.location.y + 0.05
+        let thumbDown = thumbTip.location.y < thumbIP.location.y - 0.05
+        let indexExtended = indexTip.location.y > indexPIP.location.y + 0.03
+        let middleExtended = middleTip.location.y > middlePIP.location.y + 0.03
+        let ringExtended = ringTip.location.y > ringPIP.location.y + 0.03
+        let littleExtended = littleTip.location.y > littlePIP.location.y + 0.03
+
+        let detectedGesture: Gesture
+        let confidence: Float
+
+        if thumbExtended && !indexExtended && !middleExtended && !ringExtended && !littleExtended {
+            detectedGesture = .thumbsUp
+            confidence = thumbTip.confidence
+        } else if thumbDown && !indexExtended && !middleExtended && !ringExtended && !littleExtended {
+            detectedGesture = .thumbsDown
+            confidence = thumbTip.confidence
+        } else if !thumbExtended && !thumbDown && !indexExtended && !middleExtended && !ringExtended && littleExtended {
+            detectedGesture = .pinkyUp
+            confidence = littleTip.confidence
+        } else if thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
+            detectedGesture = .fiveFingers
+            confidence = (thumbTip.confidence + indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 5
+        } else if !thumbExtended && indexExtended && middleExtended && ringExtended && littleExtended {
+            detectedGesture = .fourFingers
+            confidence = (indexTip.confidence + middleTip.confidence + ringTip.confidence + littleTip.confidence) / 4
+        } else if !indexExtended && !middleExtended && !ringExtended && !littleExtended {
+            detectedGesture = .closedFist
+            confidence = 0.8
+        } else if indexExtended && !middleExtended && !ringExtended && !littleExtended {
+            detectedGesture = .oneFingerUp
+            confidence = indexTip.confidence
+        } else if indexExtended && middleExtended && !ringExtended && !littleExtended {
+            detectedGesture = .peaceSign
+            confidence = (indexTip.confidence + middleTip.confidence) / 2
+        } else if indexExtended && middleExtended && ringExtended && !littleExtended {
+            detectedGesture = .threeFingers
+            confidence = (indexTip.confidence + middleTip.confidence + ringTip.confidence) / 3
+        } else {
+            detectedGesture = .none
+            confidence = 0
+        }
+
+        return (detectedGesture, confidence, true)
     }
 
     /// Update the current gesture with debouncing logic
@@ -305,9 +260,7 @@ class GestureDetector: ObservableObject {
         }
     }
 
-    private func shouldSkipFrame(forceFullDetection: Bool) -> Bool {
-        guard !forceFullDetection else { return false }
-        guard !trackingObservations.isEmpty else { return false }
+    private func shouldSkipFrame() -> Bool {
         guard stableGestureFrames >= stableFrameThreshold else { return false }
         let skipInterval = frameSkipWhenStable + 1
         return frameIndex % skipInterval != 0
@@ -324,23 +277,12 @@ class GestureDetector: ObservableObject {
 
     private func handleNoObservation() {
         lastValidDetectionTime = nil
-        trackingObservations = []
         stableGesture = .none
         stableGestureFrames = 0
-        lastFullDetectionFrame = 0
+        backend.resetState()
+        actionDetector.reset()
         DispatchQueue.main.async {
             self.resetGesture()
-        }
-    }
-
-    private func performTracking(on pixelBuffer: CVPixelBuffer, observation: VNDetectedObjectObservation) -> VNDetectedObjectObservation? {
-        let request = VNTrackObjectRequest(detectedObjectObservation: observation)
-        request.trackingLevel = .fast
-        do {
-            try sequenceHandler.perform([request], on: pixelBuffer)
-            return request.results?.first as? VNDetectedObjectObservation
-        } catch {
-            return nil
         }
     }
 
@@ -357,71 +299,36 @@ class GestureDetector: ObservableObject {
         return candidates.max(by: { $0.confidence < $1.confidence })
     }
 
-    private func handBoundingBox(from observation: VNHumanHandPoseObservation) -> CGRect? {
-        do {
-            let points = try observation.recognizedPoints(.all)
-            let minConfidence = Float(settings.gestureSensitivity)
-            let confidentPoints = points.values.filter { $0.confidence >= minConfidence }
-            guard !confidentPoints.isEmpty else { return nil }
+    private func selectPrimaryHand(from observations: [HandObservation]) -> HandObservation? {
+        observations.max(by: { $0.overallConfidence < $1.overallConfidence })
+    }
 
-            var minX: CGFloat = 1
-            var minY: CGFloat = 1
-            var maxX: CGFloat = 0
-            var maxY: CGFloat = 0
-
-            for point in confidentPoints {
-                minX = min(minX, CGFloat(point.location.x))
-                minY = min(minY, CGFloat(point.location.y))
-                maxX = max(maxX, CGFloat(point.location.x))
-                maxY = max(maxY, CGFloat(point.location.y))
+    private static func makeBackend(_ backend: DetectionBackend) -> HandLandmarkBackend {
+        switch backend {
+        case .vision:
+            return VisionHandLandmarkBackend(maxHands: 2)
+        case .mediaPipe:
+            if let modelUrl = Bundle.main.url(forResource: "hand_landmarker", withExtension: "task", subdirectory: "Models") {
+                if let backend = try? MediaPipeHandLandmarkBackend(maxHands: 2, modelPath: modelUrl.path) {
+                    return backend
+                }
             }
-
-            let width = max(0, maxX - minX)
-            let height = max(0, maxY - minY)
-            guard width > 0, height > 0 else { return nil }
-            return CGRect(x: minX, y: minY, width: width, height: height)
-        } catch {
-            return nil
+            print("MediaPipe backend unavailable, falling back to Vision.")
+            return VisionHandLandmarkBackend(maxHands: 2)
         }
     }
 
-    private func unionRegion(for boxes: [CGRect]) -> CGRect {
-        guard let first = boxes.first else {
-            return CGRect(x: 0, y: 0, width: 1, height: 1)
-        }
-
-        var union = expandedRegion(for: first)
-        for box in boxes.dropFirst() {
-            union = union.union(expandedRegion(for: box))
-        }
-
-        return clampedRegion(union)
-    }
-
-    private func clampedRegion(_ rect: CGRect) -> CGRect {
-        var clamped = rect
-        clamped.origin.x = max(0, min(1, clamped.origin.x))
-        clamped.origin.y = max(0, min(1, clamped.origin.y))
-        clamped.size.width = min(1 - clamped.origin.x, clamped.size.width)
-        clamped.size.height = min(1 - clamped.origin.y, clamped.size.height)
-        if clamped.width <= 0 || clamped.height <= 0 {
-            return CGRect(x: 0, y: 0, width: 1, height: 1)
-        }
-        return clamped
-    }
-
-    private func expandedRegion(for boundingBox: CGRect) -> CGRect {
-        let paddingX = boundingBox.width * roiPaddingRatio
-        let paddingY = boundingBox.height * roiPaddingRatio
-        var expanded = boundingBox.insetBy(dx: -paddingX, dy: -paddingY)
-        expanded.origin.x = max(0, expanded.origin.x)
-        expanded.origin.y = max(0, expanded.origin.y)
-        expanded.size.width = min(1 - expanded.origin.x, expanded.size.width)
-        expanded.size.height = min(1 - expanded.origin.y, expanded.size.height)
-        if expanded.width <= 0 || expanded.height <= 0 {
-            return CGRect(x: 0, y: 0, width: 1, height: 1)
-        }
-        return expanded
+    private func observeSettings() {
+        settings.$detectionBackend
+            .removeDuplicates()
+            .sink { [weak self] backend in
+                guard let self else { return }
+                self.visionQueue.async {
+                    self.backend = GestureDetector.makeBackend(backend)
+                    self.handleNoObservation()
+                }
+            }
+            .store(in: &cancellables)
     }
 
     private func finishProcessing() {

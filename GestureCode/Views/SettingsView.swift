@@ -50,6 +50,103 @@ struct SettingsView: View {
 
             Divider()
 
+            // Detection Backend
+            VStack(alignment: .leading, spacing: 4) {
+                Text("Detection Backend")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+                Picker("Detection Backend", selection: $settings.detectionBackend) {
+                    ForEach(DetectionBackend.allCases, id: \.self) { backend in
+                        Text(backend.displayName).tag(backend)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .labelsHidden()
+            }
+
+            Divider()
+
+            // Action Tuning
+            VStack(alignment: .leading, spacing: 8) {
+                Text("Action Tuning")
+                    .font(.caption)
+                    .foregroundColor(.secondary)
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Swipe Distance")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Slider(value: $settings.swipeDistanceThreshold, in: 0.05...0.5, step: 0.01)
+                        Text(String(format: "%.2f", settings.swipeDistanceThreshold))
+                            .font(.caption)
+                            .frame(width: 44)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Swipe Vertical Tolerance")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Slider(value: $settings.swipeVerticalTolerance, in: 0.02...0.4, step: 0.01)
+                        Text(String(format: "%.2f", settings.swipeVerticalTolerance))
+                            .font(.caption)
+                            .frame(width: 44)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Swipe Time Window")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Slider(value: $settings.swipeTimeWindow, in: 0.1...0.5, step: 0.05)
+                        Text(String(format: "%.2f", settings.swipeTimeWindow))
+                            .font(.caption)
+                            .frame(width: 44)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pinch Threshold")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Slider(value: $settings.pinchThreshold, in: 0.02...0.15, step: 0.01)
+                        Text(String(format: "%.2f", settings.pinchThreshold))
+                            .font(.caption)
+                            .frame(width: 44)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Pinch Release Threshold")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Slider(value: $settings.pinchReleaseThreshold, in: 0.03...0.2, step: 0.01)
+                        Text(String(format: "%.2f", settings.pinchReleaseThreshold))
+                            .font(.caption)
+                            .frame(width: 44)
+                    }
+                }
+
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Action Cooldown")
+                        .font(.caption2)
+                        .foregroundColor(.secondary)
+                    HStack {
+                        Slider(value: $settings.actionCooldown, in: 0.1...1.5, step: 0.1)
+                        Text(String(format: "%.1f", settings.actionCooldown))
+                            .font(.caption)
+                            .frame(width: 44)
+                    }
+                }
+            }
+
+            Divider()
+
             // Reset Button
             HStack {
                 Spacer()

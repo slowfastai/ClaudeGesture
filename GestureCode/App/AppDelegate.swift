@@ -301,6 +301,10 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         gestureDetector.onGestureConfirmed = { [weak self] gesture in
             self?.handleGesture(gesture)
         }
+
+        gestureDetector.onActionDetected = { [weak self] action in
+            self?.handleAction(action)
+        }
     }
 
     /// Handle a confirmed gesture
@@ -328,42 +332,59 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         }
     }
 
+    private func handleAction(_ action: HandAction) {
+        print("Action detected: \(action.rawValue)")
+        updateStatusIcon(for: action)
+        keyboardSimulator.simulateAction(action)
+    }
+
     /// Update menubar icon to show gesture feedback
     private func updateStatusIcon(for gesture: Gesture) {
-        // Change icon color briefly
-        if let button = statusItem?.button {
-            let feedbackImage: NSImage?
-            switch gesture {
-            case .thumbsUp:
-                feedbackImage = NSImage(systemSymbolName: "mic.fill", accessibilityDescription: "Voice Input")
-            case .thumbsDown:
-                feedbackImage = NSImage(systemSymbolName: "escape", accessibilityDescription: "Escape")
-            case .pinkyUp:
-                feedbackImage = NSImage(systemSymbolName: "return", accessibilityDescription: "Enter")
-            case .closedFist:
-                feedbackImage = NSImage(systemSymbolName: "arrow.left.to.line", accessibilityDescription: "Shift+Tab")
-            case .fourFingers, .fiveFingers:
-                feedbackImage = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "Number Key")
-            default:
-                feedbackImage = NSImage(systemSymbolName: "keyboard", accessibilityDescription: "Key Press")
-            }
-
-            button.image = feedbackImage
-
-            // Restore icon after delay, respecting current mode and camera state
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
-                guard let self = self else { return }
-                let restoredImage: NSImage?
-                if self.settings.cameraControlMode == .hookControlled && !self.cameraManager.isRunning {
-                    // Hook mode with camera stopped: show standby (unfilled) icon
-                    restoredImage = NSImage(systemSymbolName: "hand.raised", accessibilityDescription: "Gesture Control Standby")
-                } else {
-                    // Manual mode or camera running: show active (filled) icon
-                    restoredImage = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control")
-                }
-                button.image = restoredImage
-            }
+        switch gesture {
+        case .thumbsUp:
+            showTemporaryStatusIcon(systemName: "mic.fill", accessibilityDescription: "Voice Input")
+        case .thumbsDown:
+            showTemporaryStatusIcon(systemName: "escape", accessibilityDescription: "Escape")
+        case .pinkyUp:
+            showTemporaryStatusIcon(systemName: "return", accessibilityDescription: "Enter")
+        case .closedFist:
+            showTemporaryStatusIcon(systemName: "arrow.left.to.line", accessibilityDescription: "Shift+Tab")
+        case .fourFingers, .fiveFingers:
+            showTemporaryStatusIcon(systemName: "keyboard", accessibilityDescription: "Number Key")
+        default:
+            showTemporaryStatusIcon(systemName: "keyboard", accessibilityDescription: "Key Press")
         }
+    }
+
+    private func updateStatusIcon(for action: HandAction) {
+        switch action {
+        case .swipeLeft:
+            showTemporaryStatusIcon(systemName: "arrow.left", accessibilityDescription: "Swipe Left")
+        case .swipeRight:
+            showTemporaryStatusIcon(systemName: "arrow.right", accessibilityDescription: "Swipe Right")
+        case .pinch:
+            showTemporaryStatusIcon(systemName: "cursorarrow", accessibilityDescription: "Pinch Click")
+        }
+    }
+
+    private func showTemporaryStatusIcon(systemName: String, accessibilityDescription: String) {
+        guard let button = statusItem?.button else { return }
+        button.image = NSImage(systemSymbolName: systemName, accessibilityDescription: accessibilityDescription)
+
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+            self?.restoreStatusIcon()
+        }
+    }
+
+    private func restoreStatusIcon() {
+        guard let button = statusItem?.button else { return }
+        let restoredImage: NSImage?
+        if settings.cameraControlMode == .hookControlled && !cameraManager.isRunning {
+            restoredImage = NSImage(systemSymbolName: "hand.raised", accessibilityDescription: "Gesture Control Standby")
+        } else {
+            restoredImage = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control")
+        }
+        button.image = restoredImage
     }
 
     /// Check and request necessary permissions

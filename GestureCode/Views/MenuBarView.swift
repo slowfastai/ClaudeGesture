@@ -279,7 +279,7 @@ struct ErrorRow: View {
 
 struct GestureReferenceView: View {
     var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
+        VStack(alignment: .leading, spacing: 8) {
             Text("Gestures")
                 .font(.caption)
                 .foregroundColor(.secondary)
@@ -293,6 +293,26 @@ struct GestureReferenceView: View {
                         Text(gesture.emoji)
                             .font(.caption)
                         Text(gesture.actionDescription)
+                            .font(.caption2)
+                            .foregroundColor(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                }
+            }
+
+            Text("Actions")
+                .font(.caption)
+                .foregroundColor(.secondary)
+
+            LazyVGrid(columns: [
+                GridItem(.flexible()),
+                GridItem(.flexible())
+            ], spacing: 4) {
+                ForEach(HandAction.allCases, id: \.self) { action in
+                    HStack(spacing: 4) {
+                        Text(action.emoji)
+                            .font(.caption)
+                        Text(action.actionDescription)
                             .font(.caption2)
                             .foregroundColor(.secondary)
                     }

@@ -20,6 +20,13 @@
 		A1000011001 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000 /* Settings.swift */; };
 		A1000012001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000012000 /* Assets.xcassets */; };
 		A1000015001 /* FloatingPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000015000 /* FloatingPreviewWindow.swift */; };
+		A1000017001 /* HandLandmarkBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000017000 /* HandLandmarkBackend.swift */; };
+		A1000018001 /* VisionHandLandmarkBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018000 /* VisionHandLandmarkBackend.swift */; };
+		A1000019001 /* MediaPipeHandLandmarkBackend.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000019000 /* MediaPipeHandLandmarkBackend.swift */; };
+		A1000020001 /* HandActionDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000020000 /* HandActionDetector.swift */; };
+		A1000021001 /* HandLandmark.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000021000 /* HandLandmark.swift */; };
+		A1000022001 /* HandAction.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000022000 /* HandAction.swift */; };
+		A1000023001 /* hand_landmarker.task in Resources */ = {isa = PBXBuildFile; fileRef = A1000023000 /* hand_landmarker.task */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +46,13 @@
 		A1000013000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		A1000014000 /* GestureCode.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = GestureCode.entitlements; sourceTree = "<group>"; };
 		A1000015000 /* FloatingPreviewWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FloatingPreviewWindow.swift; sourceTree = "<group>"; };
+		A1000017000 /* HandLandmarkBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmarkBackend.swift; sourceTree = "<group>"; };
+		A1000018000 /* VisionHandLandmarkBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VisionHandLandmarkBackend.swift; sourceTree = "<group>"; };
+		A1000019000 /* MediaPipeHandLandmarkBackend.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaPipeHandLandmarkBackend.swift; sourceTree = "<group>"; };
+		A1000020000 /* HandActionDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandActionDetector.swift; sourceTree = "<group>"; };
+		A1000021000 /* HandLandmark.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandLandmark.swift; sourceTree = "<group>"; };
+		A1000022000 /* HandAction.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HandAction.swift; sourceTree = "<group>"; };
+		A1000023000 /* hand_landmarker.task */ = {isa = PBXFileReference; lastKnownFileType = file; path = hand_landmarker.task; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -109,6 +123,10 @@
 				A1000007000 /* GestureDetector.swift */,
 				A1000008000 /* KeyboardSimulator.swift */,
 				A1000016000 /* ProcessMonitor.swift */,
+				A1000017000 /* HandLandmarkBackend.swift */,
+				A1000018000 /* VisionHandLandmarkBackend.swift */,
+				A1000019000 /* MediaPipeHandLandmarkBackend.swift */,
+				A1000020000 /* HandActionDetector.swift */,
 			);
 			path = Services;
 			sourceTree = "<group>";
@@ -118,6 +136,8 @@
 			children = (
 				A1000010000 /* Gesture.swift */,
 				A1000011000 /* Settings.swift */,
+				A1000021000 /* HandLandmark.swift */,
+				A1000022000 /* HandAction.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -125,9 +145,18 @@
 		A1000207000 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				A1000024000 /* Models */,
 				A1000012000 /* Assets.xcassets */,
 			);
 			path = Resources;
+			sourceTree = "<group>";
+		};
+		A1000024000 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				A1000023000 /* hand_landmarker.task */,
+			);
+			path = Models;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -189,6 +218,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				A1000012001 /* Assets.xcassets in Resources */,
+				A1000023001 /* hand_landmarker.task in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -211,6 +241,12 @@
 				A1000010001 /* Gesture.swift in Sources */,
 				A1000011001 /* Settings.swift in Sources */,
 				A1000015001 /* FloatingPreviewWindow.swift in Sources */,
+				A1000017001 /* HandLandmarkBackend.swift in Sources */,
+				A1000018001 /* VisionHandLandmarkBackend.swift in Sources */,
+				A1000019001 /* MediaPipeHandLandmarkBackend.swift in Sources */,
+				A1000020001 /* HandActionDetector.swift in Sources */,
+				A1000021001 /* HandLandmark.swift in Sources */,
+				A1000022001 /* HandAction.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
