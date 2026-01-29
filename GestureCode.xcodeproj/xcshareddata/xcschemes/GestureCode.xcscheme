@@ -16,9 +16,9 @@
             <BuildableReference
                BuildableIdentifier = "primary"
                BlueprintIdentifier = "A1000300000"
-               BuildableName = "ClaudeGesture.app"
-               BlueprintName = "ClaudeGesture"
-               ReferencedContainer = "container:ClaudeGesture.xcodeproj">
+               BuildableName = "GestureCode.app"
+               BlueprintName = "GestureCode"
+               ReferencedContainer = "container:GestureCode.xcodeproj">
             </BuildableReference>
          </BuildActionEntry>
       </BuildActionEntries>
@@ -45,9 +45,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A1000300000"
-            BuildableName = "ClaudeGesture.app"
-            BlueprintName = "ClaudeGesture"
-            ReferencedContainer = "container:ClaudeGesture.xcodeproj">
+            BuildableName = "GestureCode.app"
+            BlueprintName = "GestureCode"
+            ReferencedContainer = "container:GestureCode.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </LaunchAction>
@@ -62,9 +62,9 @@
          <BuildableReference
             BuildableIdentifier = "primary"
             BlueprintIdentifier = "A1000300000"
-            BuildableName = "ClaudeGesture.app"
-            BlueprintName = "ClaudeGesture"
-            ReferencedContainer = "container:ClaudeGesture.xcodeproj">
+            BuildableName = "GestureCode.app"
+            BlueprintName = "GestureCode"
+            ReferencedContainer = "container:GestureCode.xcodeproj">
          </BuildableReference>
       </BuildableProductRunnable>
    </ProfileAction>

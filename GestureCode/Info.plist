@@ -33,9 +33,9 @@
 	<key>LSMultipleInstancesProhibited</key>
 	<true/>
 	<key>NSCameraUsageDescription</key>
-	<string>ClaudeGesture needs camera access to detect hand gestures for hands-free control.</string>
+	<string>GestureCode needs camera access to detect hand gestures for hands-free control.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>ClaudeGesture needs microphone access for voice-to-text input when triggered by gesture.</string>
+	<string>GestureCode needs microphone access for voice-to-text input when triggered by gesture.</string>
 	<key>NSHumanReadableCopyright</key>
 	<string>Copyright © 2026 SlowFast AI. All rights reserved. MIT License.</string>
 	<key>NSPrincipalClass</key>
@@ -44,10 +44,10 @@
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>com.claudegesture.control</string>
+			<string>com.gesturecode.control</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
-				<string>claudegesture</string>
+				<string>gesturecode</string>
 			</array>
 		</dict>
 	</array>

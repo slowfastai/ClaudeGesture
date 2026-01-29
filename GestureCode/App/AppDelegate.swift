@@ -29,7 +29,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     private var cancellables = Set<AnyCancellable>()
 
     func applicationDidFinishLaunching(_ notification: Notification) {
-        // Prevent multiple instances — quit if another ClaudeGesture is already running
+        // Prevent multiple instances — quit if another GestureCode is already running
         let running = NSRunningApplication.runningApplications(withBundleIdentifier: Bundle.main.bundleIdentifier!)
         if running.count > 1 {
             NSApplication.shared.terminate(nil)
@@ -119,7 +119,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         .store(in: &cancellables)
     }
 
-    /// Register handler for custom URL scheme (claudegesture://)
+    /// Register handler for custom URL scheme (gesturecode://)
     private func setupURLHandler() {
         NSAppleEventManager.shared().setEventHandler(
             self,
@@ -129,7 +129,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         )
     }
 
-    /// Handle incoming URL events (claudegesture://camera/start or claudegesture://camera/stop)
+    /// Handle incoming URL events (gesturecode://camera/start or gesturecode://camera/stop)
     @objc private func handleURLEvent(_ event: NSAppleEventDescriptor, withReplyEvent replyEvent: NSAppleEventDescriptor) {
         // Note: previousActiveApp is already captured by appWillBecomeActive notification
         // which fires BEFORE we become active (correct timing for focus restoration)
@@ -139,8 +139,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
-        // Parse URL: claudegesture://camera/start -> host="camera", path="/start"
-        guard url.scheme == "claudegesture",
+        // Parse URL: gesturecode://camera/start -> host="camera", path="/start"
+        guard url.scheme == "gesturecode",
               url.host == "camera" else {
             print("Unknown URL: \(urlString)")
             return
@@ -247,7 +247,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             } else {
                 // No previous app or it terminated, hide ourselves
                 NSApp.hide(nil)
-                print("⚠ No previous app available, hiding ClaudeGesture")
+                print("⚠ No previous app available, hiding GestureCode")
             }
 
             // Clear the tracked app

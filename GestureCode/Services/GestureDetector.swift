@@ -10,7 +10,7 @@ class GestureDetector: ObservableObject {
 
     private let settings = AppSettings.shared
 
-    private let visionQueue = DispatchQueue(label: "com.claudegesture.vision")
+    private let visionQueue = DispatchQueue(label: "com.gesturecode.vision")
     private let processingSemaphore = DispatchSemaphore(value: 1)
     private let sequenceHandler = VNSequenceRequestHandler()
     private let handPoseRequest = VNDetectHumanHandPoseRequest()

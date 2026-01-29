@@ -2,7 +2,7 @@ import SwiftUI
 
 /// Main application entry point
 @main
-struct ClaudeGestureApp: App {
+struct GestureCodeApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
 
     var body: some Scene {

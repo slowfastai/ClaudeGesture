@@ -6,29 +6,29 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ```bash
 # Build the project
-xcodebuild -project ClaudeGesture.xcodeproj -scheme ClaudeGesture build
+xcodebuild -project GestureCode.xcodeproj -scheme GestureCode build
 
 # Build for release
-xcodebuild -project ClaudeGesture.xcodeproj -scheme ClaudeGesture -configuration Release build
+xcodebuild -project GestureCode.xcodeproj -scheme GestureCode -configuration Release build
 
 # Clean build
-xcodebuild -project ClaudeGesture.xcodeproj -scheme ClaudeGesture clean build
+xcodebuild -project GestureCode.xcodeproj -scheme GestureCode clean build
 ```
 
 ## Packaging
 
 ```bash
 # Create a .dmg installer (requires: brew install create-dmg)
-./scripts/create-dmg.sh /path/to/ClaudeGesture.app
+./scripts/create-dmg.sh /path/to/GestureCode.app
 ```
 
 ## Architecture
 
-ClaudeGesture is a macOS menubar-only app for hands-free gesture control. It uses the Vision framework for hand pose detection and simulates keyboard input based on recognized gestures.
+GestureCode is a macOS menubar-only app for hands-free gesture control. It uses the Vision framework for hand pose detection and simulates keyboard input based on recognized gestures.
 
 ### App Lifecycle
 
-- `ClaudeGestureApp.swift`: Entry point, sets app to `.accessory` activation policy (no dock icon)
+- `GestureCodeApp.swift`: Entry point, sets app to `.accessory` activation policy (no dock icon)
 - `AppDelegate`: Creates menubar status item with popover, instantiates all managers, wires up the gesture → action pipeline
 
 ### Data Flow
@@ -72,11 +72,11 @@ The `Gesture` enum defines recognized gestures and their mapped actions:
 
 ### Hook-Controlled Camera Mode
 
-ClaudeGesture supports automatic camera activation via Claude Code hooks. When enabled, the camera only runs while Claude is waiting for user input.
+GestureCode supports automatic camera activation via Claude Code hooks. When enabled, the camera only runs while Claude is waiting for user input.
 
-**URL Scheme:** `claudegesture://camera/start?pid=<PID>` and `claudegesture://camera/stop`
+**URL Scheme:** `gesturecode://camera/start?pid=<PID>` and `gesturecode://camera/stop`
 
-The `pid` query parameter is optional. When provided, ClaudeGesture monitors the process and auto-stops the camera if it exits (e.g., user kills Claude Code with ctrl+c). Old hooks without `?pid=` still work, just without auto-stop on session termination.
+The `pid` query parameter is optional. When provided, GestureCode monitors the process and auto-stops the camera if it exits (e.g., user kills Claude Code with ctrl+c). Old hooks without `?pid=` still work, just without auto-stop on session termination.
 
 **Claude Code Hooks** (add to `~/.claude/settings.json` for global, or `.claude/settings.json` for project-specific):
 ```json
@@ -85,23 +85,23 @@ The `pid` query parameter is optional. When provided, ClaudeGesture monitors the
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open -g \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g \"gesturecode://camera/start?pid=$PPID\"", "timeout": 5 }]
       }
     ],
     "UserPromptSubmit": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open -g 'claudegesture://camera/stop'", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g 'gesturecode://camera/stop'", "timeout": 5 }]
       }
     ]
   }
 }
 ```
 
-The `-g` flag prevents macOS from activating ClaudeGesture and switching desktops when the hook runs. This ensures you stay on your current desktop regardless of where ClaudeGesture was launched.
+The `-g` flag prevents macOS from activating GestureCode and switching desktops when the hook runs. This ensures you stay on your current desktop regardless of where GestureCode was launched.
 
 **Setup:**
-1. Run ClaudeGesture and grant camera permission (do this before relying on hooks)
+1. Run GestureCode and grant camera permission (do this before relying on hooks)
 2. Enable master toggle and select "Hook-Controlled" mode
 3. Camera activates when Claude finishes responding, deactivates when you submit
 
