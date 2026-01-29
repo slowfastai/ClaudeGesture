@@ -212,6 +212,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             return
         }
 
+        keyboardSimulator.releaseFnKeyIfNeeded()
         // Always reset icon to standby (handles failed starts or rapid stop after start)
         updateStatusIconForHookState(active: false)
 
@@ -339,6 +340,8 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 feedbackImage = NSImage(systemSymbolName: "escape", accessibilityDescription: "Escape")
             case .pinkyUp:
                 feedbackImage = NSImage(systemSymbolName: "return", accessibilityDescription: "Enter")
+            case .doubleOpenHands:
+                feedbackImage = NSImage(systemSymbolName: "return", accessibilityDescription: "Enter")
             case .closedFist:
                 feedbackImage = NSImage(systemSymbolName: "arrow.left.to.line", accessibilityDescription: "Shift+Tab")
             case .fourFingers, .fiveFingers:
@@ -393,6 +396,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
         // Cleanup
         processMonitor?.stop()
         processMonitor = nil
+        keyboardSimulator.releaseFnKeyIfNeeded()
         cameraManager.stop()
     }
 }

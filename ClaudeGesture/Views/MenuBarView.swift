@@ -68,11 +68,13 @@ struct MenuBarView: View {
                     if newValue {
                         cameraManager.start()
                     } else {
+                        keyboardSimulator.releaseFnKeyIfNeeded()
                         cameraManager.stop()
                     }
                 } else {
                     // Hook-controlled: stop camera when disabled, but don't auto-start
                     if !newValue {
+                        keyboardSimulator.releaseFnKeyIfNeeded()
                         cameraManager.stop()
                     }
                 }
@@ -80,6 +82,7 @@ struct MenuBarView: View {
             .onChange(of: settings.cameraControlMode) { _, newMode in
                 // When switching modes, stop camera to reset state
                 if cameraManager.isRunning {
+                    keyboardSimulator.releaseFnKeyIfNeeded()
                     cameraManager.stop()
                 }
                 // In manual mode with enabled toggle, start camera
@@ -285,7 +288,7 @@ struct GestureReferenceView: View {
                 GridItem(.flexible()),
                 GridItem(.flexible())
             ], spacing: 4) {
-                ForEach(Gesture.allCases.filter { $0 != .none }, id: \.self) { gesture in
+                ForEach(Gesture.allCases.filter { $0 != .none && $0.actionDescription != "No action" }, id: \.self) { gesture in
                     HStack(spacing: 4) {
                         Text(gesture.emoji)
                             .font(.caption)
