@@ -340,8 +340,6 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                 feedbackImage = NSImage(systemSymbolName: "escape", accessibilityDescription: "Escape")
             case .pinkyUp:
                 feedbackImage = NSImage(systemSymbolName: "return", accessibilityDescription: "Enter")
-            case .doubleOpenHands:
-                feedbackImage = NSImage(systemSymbolName: "return", accessibilityDescription: "Enter")
             case .closedFist:
                 feedbackImage = NSImage(systemSymbolName: "arrow.left.to.line", accessibilityDescription: "Shift+Tab")
             case .fourFingers, .fiveFingers:
