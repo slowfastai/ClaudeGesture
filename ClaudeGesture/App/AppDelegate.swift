@@ -10,6 +10,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Managers
     let cameraManager = CameraManager()
     let gestureDetector = GestureDetector()
+    let actionDetector = ActionDetector()
     let keyboardSimulator = KeyboardSimulator()
     let settings = AppSettings.shared
 
@@ -285,6 +286,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             rootView: MenuBarView(
                 cameraManager: cameraManager,
                 gestureDetector: gestureDetector,
+                actionDetector: actionDetector,
                 keyboardSimulator: keyboardSimulator
             )
         )
@@ -297,9 +299,23 @@ class AppDelegate: NSObject, NSApplicationDelegate {
             self?.gestureDetector.analyzeFrame(pixelBuffer)
         }
 
+        // Forward hand observations to action detector
+        gestureDetector.onHandObservations = { [weak self] observations, time in
+            self?.actionDetector.process(observations: observations, at: time)
+        }
+
+        // Handle confirmed actions
+        actionDetector.onActionConfirmed = { [weak self] action in
+            self?.handleAction(action)
+        }
+
         // Handle confirmed gestures
         gestureDetector.onGestureConfirmed = { [weak self] gesture in
-            self?.handleGesture(gesture)
+            guard let self = self else { return }
+            if self.actionDetector.shouldSuppressGestures(now: Date()) {
+                return
+            }
+            self.handleGesture(gesture)
         }
     }
 
@@ -326,6 +342,14 @@ class AppDelegate: NSObject, NSApplicationDelegate {
            gesture.isNumberGesture {
             handleCameraStopCommand()
         }
+    }
+
+    /// Handle a confirmed action
+    private func handleAction(_ action: ActionGesture) {
+        print("Action confirmed: \(action.rawValue)")
+
+        updateStatusIcon(for: action)
+        keyboardSimulator.simulateAction(for: action)
     }
 
     /// Update menubar icon to show gesture feedback
@@ -359,6 +383,39 @@ class AppDelegate: NSObject, NSApplicationDelegate {
                     restoredImage = NSImage(systemSymbolName: "hand.raised", accessibilityDescription: "Gesture Control Standby")
                 } else {
                     // Manual mode or camera running: show active (filled) icon
+                    restoredImage = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control")
+                }
+                button.image = restoredImage
+            }
+        }
+    }
+
+    /// Update menubar icon to show action feedback
+    private func updateStatusIcon(for action: ActionGesture) {
+        if let button = statusItem?.button {
+            let feedbackImage: NSImage?
+            switch action {
+            case .airTap:
+                feedbackImage = NSImage(systemSymbolName: "return", accessibilityDescription: "Enter")
+            case .backHandWave:
+                feedbackImage = NSImage(systemSymbolName: "arrow.left.to.line", accessibilityDescription: "Shift+Tab")
+            case .pinchDragLeft:
+                feedbackImage = NSImage(systemSymbolName: "escape", accessibilityDescription: "Escape")
+            case .circle:
+                feedbackImage = NSImage(systemSymbolName: "arrow.down", accessibilityDescription: "Page Down")
+            case .none:
+                feedbackImage = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control")
+            }
+
+            button.image = feedbackImage
+
+            // Restore icon after delay, respecting current mode and camera state
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { [weak self] in
+                guard let self = self else { return }
+                let restoredImage: NSImage?
+                if self.settings.cameraControlMode == .hookControlled && !self.cameraManager.isRunning {
+                    restoredImage = NSImage(systemSymbolName: "hand.raised", accessibilityDescription: "Gesture Control Standby")
+                } else {
                     restoredImage = NSImage(systemSymbolName: "hand.raised.fill", accessibilityDescription: "Gesture Control")
                 }
                 button.image = restoredImage

@@ -35,6 +35,8 @@ class GestureDetector: ObservableObject {
 
     /// Callback when a gesture is confirmed (held for required duration)
     var onGestureConfirmed: ((Gesture) -> Void)?
+    /// Callback with raw hand observations for action detection
+    var onHandObservations: (([VNHumanHandPoseObservation], Date) -> Void)?
 
     init() {
         handPoseRequest.maximumHandCount = 2
@@ -123,6 +125,7 @@ class GestureDetector: ObservableObject {
                 return
             }
 
+            onHandObservations?(validObservations, now)
             lastValidDetectionTime = now
             trackingObservations = validObservations.compactMap { observation in
                 guard let boundingBox = handBoundingBox(from: observation) else { return nil }
@@ -328,6 +331,7 @@ class GestureDetector: ObservableObject {
         stableGesture = .none
         stableGestureFrames = 0
         lastFullDetectionFrame = 0
+        onHandObservations?([], Date())
         DispatchQueue.main.async {
             self.resetGesture()
         }

@@ -48,6 +48,9 @@ class AppSettings: ObservableObject {
         static let gestureSensitivity = "gestureSensitivity"
         static let gestureHoldDuration = "gestureHoldDuration"
         static let gestureCooldown = "gestureCooldown"
+        static let actionDetectionEnabled = "actionDetectionEnabled"
+        static let actionWindowSeconds = "actionWindowSeconds"
+        static let actionCooldown = "actionCooldown"
         static let cameraControlMode = "cameraControlMode"
         static let cameraPreviewMode = "cameraPreviewMode"
         // Legacy keys (for migration)
@@ -83,6 +86,27 @@ class AppSettings: ObservableObject {
         }
     }
 
+    /// Whether action detection is enabled
+    @Published var actionDetectionEnabled: Bool {
+        didSet {
+            defaults.set(actionDetectionEnabled, forKey: Keys.actionDetectionEnabled)
+        }
+    }
+
+    /// Time window for action detection (in seconds)
+    @Published var actionWindowSeconds: Double {
+        didSet {
+            defaults.set(actionWindowSeconds, forKey: Keys.actionWindowSeconds)
+        }
+    }
+
+    /// Cooldown between action triggers (in seconds)
+    @Published var actionCooldown: Double {
+        didSet {
+            defaults.set(actionCooldown, forKey: Keys.actionCooldown)
+        }
+    }
+
     /// Camera control mode (manual or hook-controlled)
     @Published var cameraControlMode: CameraControlMode {
         didSet {
@@ -103,6 +127,9 @@ class AppSettings: ObservableObject {
         self.gestureSensitivity = defaults.object(forKey: Keys.gestureSensitivity) as? Double ?? 0.7
         self.gestureHoldDuration = defaults.object(forKey: Keys.gestureHoldDuration) as? Double ?? 0.3
         self.gestureCooldown = defaults.object(forKey: Keys.gestureCooldown) as? Double ?? 0.5
+        self.actionDetectionEnabled = defaults.object(forKey: Keys.actionDetectionEnabled) as? Bool ?? true
+        self.actionWindowSeconds = defaults.object(forKey: Keys.actionWindowSeconds) as? Double ?? 0.6
+        self.actionCooldown = defaults.object(forKey: Keys.actionCooldown) as? Double ?? 0.7
         if let modeString = defaults.string(forKey: Keys.cameraControlMode),
            let mode = CameraControlMode(rawValue: modeString) {
             self.cameraControlMode = mode
@@ -148,6 +175,9 @@ class AppSettings: ObservableObject {
         gestureSensitivity = 0.7
         gestureHoldDuration = 0.3
         gestureCooldown = 0.5
+        actionDetectionEnabled = true
+        actionWindowSeconds = 0.6
+        actionCooldown = 0.7
         cameraControlMode = .hookControlled
         cameraPreviewMode = .off
     }

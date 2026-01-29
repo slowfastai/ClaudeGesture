@@ -14,9 +14,11 @@
 		A1000005001 /* CameraPreviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000005000 /* CameraPreviewView.swift */; };
 		A1000006001 /* CameraManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000006000 /* CameraManager.swift */; };
 		A1000007001 /* GestureDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000007000 /* GestureDetector.swift */; };
+		A1000017001 /* ActionDetector.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000017000 /* ActionDetector.swift */; };
 		A1000008001 /* KeyboardSimulator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000008000 /* KeyboardSimulator.swift */; };
 		A1000016001 /* ProcessMonitor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000016000 /* ProcessMonitor.swift */; };
 		A1000010001 /* Gesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000010000 /* Gesture.swift */; };
+		A1000018001 /* ActionGesture.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000018000 /* ActionGesture.swift */; };
 		A1000011001 /* Settings.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000011000 /* Settings.swift */; };
 		A1000012001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000012000 /* Assets.xcassets */; };
 		A1000015001 /* FloatingPreviewWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000015000 /* FloatingPreviewWindow.swift */; };
@@ -31,9 +33,11 @@
 		A1000005000 /* CameraPreviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraPreviewView.swift; sourceTree = "<group>"; };
 		A1000006000 /* CameraManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CameraManager.swift; sourceTree = "<group>"; };
 		A1000007000 /* GestureDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GestureDetector.swift; sourceTree = "<group>"; };
+		A1000017000 /* ActionDetector.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionDetector.swift; sourceTree = "<group>"; };
 		A1000008000 /* KeyboardSimulator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardSimulator.swift; sourceTree = "<group>"; };
 		A1000016000 /* ProcessMonitor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProcessMonitor.swift; sourceTree = "<group>"; };
 		A1000010000 /* Gesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Gesture.swift; sourceTree = "<group>"; };
+		A1000018000 /* ActionGesture.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActionGesture.swift; sourceTree = "<group>"; };
 		A1000011000 /* Settings.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Settings.swift; sourceTree = "<group>"; };
 		A1000012000 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		A1000013000 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
@@ -107,6 +111,7 @@
 			children = (
 				A1000006000 /* CameraManager.swift */,
 				A1000007000 /* GestureDetector.swift */,
+				A1000017000 /* ActionDetector.swift */,
 				A1000008000 /* KeyboardSimulator.swift */,
 				A1000016000 /* ProcessMonitor.swift */,
 			);
@@ -117,6 +122,7 @@
 			isa = PBXGroup;
 			children = (
 				A1000010000 /* Gesture.swift */,
+				A1000018000 /* ActionGesture.swift */,
 				A1000011000 /* Settings.swift */,
 			);
 			path = Models;
@@ -206,9 +212,11 @@
 				A1000005001 /* CameraPreviewView.swift in Sources */,
 				A1000006001 /* CameraManager.swift in Sources */,
 				A1000007001 /* GestureDetector.swift in Sources */,
+				A1000017001 /* ActionDetector.swift in Sources */,
 				A1000008001 /* KeyboardSimulator.swift in Sources */,
 				A1000016001 /* ProcessMonitor.swift in Sources */,
 				A1000010001 /* Gesture.swift in Sources */,
+				A1000018001 /* ActionGesture.swift in Sources */,
 				A1000011001 /* Settings.swift in Sources */,
 				A1000015001 /* FloatingPreviewWindow.swift in Sources */,
 			);

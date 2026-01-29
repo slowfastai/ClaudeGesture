@@ -57,6 +57,18 @@ class KeyboardSimulator: ObservableObject {
         lastKeyPressed = gesture.actionDescription
     }
 
+    /// Simulate a key press for the given action gesture
+    func simulateAction(for action: ActionGesture) {
+        guard let keyCode = action.keyCode else { return }
+
+        if let modifiers = action.modifiers {
+            simulateKeyWithModifiers(keyCode: keyCode, modifiers: modifiers)
+        } else {
+            simulateKeyPress(keyCode: keyCode)
+        }
+        lastKeyPressed = action.actionDescription
+    }
+
     /// Simulate pressing a key with modifier keys (e.g., Shift+Tab)
     func simulateKeyWithModifiers(keyCode: UInt16, modifiers: CGEventFlags) {
         guard accessibilityGranted else {
