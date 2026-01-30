@@ -26,7 +26,7 @@ struct MenuBarView: View {
             HStack {
                 Image(systemName: "hand.raised.fill")
                     .font(.title2)
-                Text("ClaudeGesture")
+                Text("GestureCode")
                     .font(.headline)
                 Spacer()
                 Button(action: { showSettings.toggle() }) {

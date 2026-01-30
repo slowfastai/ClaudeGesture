@@ -1,4 +1,4 @@
-# ClaudeGesture
+# GestureCode
 
 **Hands-free gesture control for Claude Code on macOS.**
 
@@ -8,7 +8,7 @@
 
 <!-- Add a demo GIF here: ![Demo](assets/demo.gif) -->
 
-ClaudeGesture is a macOS menubar app that uses your camera to detect hand gestures and translate them into keyboard input — letting you control Claude Code (or Codex CLI) without touching the keyboard.
+GestureCode is a macOS menubar app that uses your camera to detect hand gestures and translate them into keyboard input — letting you control Claude Code (or Codex CLI) without touching the keyboard.
 
 ## Features
 
@@ -38,26 +38,26 @@ ClaudeGesture is a macOS menubar app that uses your camera to detect hand gestur
 
 ### Download
 
-Grab the latest `.dmg` from [Releases](../../releases), open it, and drag ClaudeGesture to Applications.
+Grab the latest `.dmg` from [Releases](../../releases), open it, and drag GestureCode to Applications.
 
 ### Build from Source
 
 ```bash
-git clone https://github.com/anthropics/ClaudeGesture.git
-cd ClaudeGesture
-xcodebuild -project ClaudeGesture.xcodeproj -scheme ClaudeGesture -configuration Release build
+git clone https://github.com/slowfastai/GestureCode.git
+cd GestureCode
+xcodebuild -project GestureCode.xcodeproj -scheme GestureCode -configuration Release build
 ```
 
 ## Setup
 
-1. **Launch** ClaudeGesture — it appears as a hand icon in your menubar
+1. **Launch** GestureCode — it appears as a hand icon in your menubar
 2. **Grant Camera access** when prompted (required for gesture detection)
-3. **Grant Accessibility access** — go to System Settings > Privacy & Security > Accessibility and enable ClaudeGesture (required for keyboard simulation)
+3. **Grant Accessibility access** — go to System Settings > Privacy & Security > Accessibility and enable GestureCode (required for keyboard simulation)
 4. **Enable the master toggle** in the menubar popover
 
 ## Claude Code Integration
 
-ClaudeGesture can automatically activate the camera only when Claude Code is waiting for your input, using Claude Code hooks.
+GestureCode can automatically activate the camera only when Claude Code is waiting for your input, using Claude Code hooks.
 
 Add this to `~/.claude/settings.json` (global) or `.claude/settings.json` (project-specific):
 
@@ -67,13 +67,13 @@ Add this to `~/.claude/settings.json` (global) or `.claude/settings.json` (proje
     "Stop": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open -g \"claudegesture://camera/start?pid=$PPID\"", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g \"gesturecode://camera/start?pid=$PPID\"", "timeout": 5 }]
       }
     ],
     "UserPromptSubmit": [
       {
         "matcher": "",
-        "hooks": [{ "type": "command", "command": "open -g 'claudegesture://camera/stop'", "timeout": 5 }]
+        "hooks": [{ "type": "command", "command": "open -g 'gesturecode://camera/stop'", "timeout": 5 }]
       }
     ]
   }
@@ -82,7 +82,7 @@ Add this to `~/.claude/settings.json` (global) or `.claude/settings.json` (proje
 
 The `-g` flag prevents macOS from switching desktops when the hook runs.
 
-Then select **Hook-Controlled** mode in the ClaudeGesture settings.
+Then select **Hook-Controlled** mode in the GestureCode settings.
 
 ## Configuration
 
