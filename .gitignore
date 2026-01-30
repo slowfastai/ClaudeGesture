@@ -7,6 +7,7 @@ dmg_contents/
 ## User settings
 xcuserdata/
 ClaudeGesture.xcodeproj/project.xcworkspace/
+GestureCode.xcodeproj/project.xcworkspace/
 build/
 
 ## Obj-C/Swift specific
